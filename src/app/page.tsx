@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { MS_TOKENS } from "~/lib/tokens";
@@ -8,6 +8,7 @@ import { MSGetCat, getIcon } from "~/lib/data";
 import { StatusBadge, PriorityBadge, Upvote } from "~/components/ui";
 import dynamic from "next/dynamic";
 import { useIssues } from "~/lib/api";
+import Loader from "~/components/loader";
 
 const LeafletMap = dynamic(() => import("~/components/leaflet-map"), { ssr: false, loading: () => <div style={{ width: "100%", height: "100%", background: "#e8e0d0" }} /> });
 
@@ -22,6 +23,13 @@ export default function HomePage() {
   const { issues, loading } = useIssues(
     filter === "urgent" ? { priority: "URGENT" } : undefined
   );
+
+  const [minHold, setMinHold] = useState(true);
+  useEffect(() => {
+    const id = setTimeout(() => setMinHold(false), 3000);
+    return () => clearTimeout(id);
+  }, []);
+  const showLoader = loading || minHold;
 
   const allMapped = useMemo(() => issues.map((issue: any) => ({
     ...issue,
@@ -50,6 +58,17 @@ export default function HomePage() {
 
   const selectedIssue =
     displayedIssues.find((i: any) => i.id === selectedId) ?? displayedIssues[0];
+
+  if (showLoader) {
+    return (
+      <div
+        className="mx-auto flex h-[100dvh] max-w-md flex-col overflow-hidden"
+        style={{ background: MS_TOKENS.paper }}
+      >
+        <Loader />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -168,16 +187,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {loading ? (
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ textAlign: "center" }}>
-            <div style={{ width: 40, height: 40, border: `3px solid ${MS_TOKENS.ink[100]}`, borderTopColor: MS_TOKENS.blue[600], borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto 12px" }} />
-            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-            <span style={{ color: MS_TOKENS.ink[500], fontSize: 14 }}>Loading issues...</span>
-          </div>
-        </div>
-      ) : (
-        <div style={{ flex: "1 1 0", display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+      <div style={{ flex: "1 1 0", display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
           {/* Map view */}
           {view === "map" && (
             <div style={{ flex: "1 1 0", position: "relative", overflow: "hidden" }}>
@@ -221,15 +231,15 @@ export default function HomePage() {
                   <button
                     style={{
                       all: "unset", cursor: "pointer",
-                      position: "absolute", right: 18, bottom: 18,
-                      height: 56, padding: "0 22px 0 18px", borderRadius: 99,
+                      position: "absolute", right: 14, bottom: 14,
+                      height: 44, padding: "0 16px 0 13px", borderRadius: 99,
                       background: MS_TOKENS.blue[600], color: "#fff",
-                      display: "flex", alignItems: "center", gap: 8,
-                      boxShadow: "0 14px 28px -8px rgba(31,111,235,0.45), 0 4px 8px rgba(11,26,36,0.12)",
-                      fontFamily: MS_TOKENS.fontDisplay, fontWeight: 600, fontSize: 15, letterSpacing: "-0.01em",
+                      display: "flex", alignItems: "center", gap: 6,
+                      boxShadow: "0 10px 22px -8px rgba(31,111,235,0.45), 0 3px 6px rgba(11,26,36,0.12)",
+                      fontFamily: MS_TOKENS.fontDisplay, fontWeight: 600, fontSize: 13, letterSpacing: "-0.01em",
                     }}
                   >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                       <path d="M12 5v14M5 12h14" />
                     </svg>
                     Report Issue
@@ -259,22 +269,21 @@ export default function HomePage() {
             </div>
           )}
         </div>
-      )}
 
       {/* FAB for list view */}
       {view === "list" && (
         <Link href="/report">
           <button
             style={{
-              all: "unset", cursor: "pointer", position: "absolute", right: 18, bottom: 22,
-              height: 56, padding: "0 22px 0 18px", borderRadius: 99,
+              all: "unset", cursor: "pointer", position: "absolute", right: 14, bottom: 14,
+              height: 44, padding: "0 16px 0 13px", borderRadius: 99,
               background: MS_TOKENS.blue[600], color: "#fff",
-              display: "flex", alignItems: "center", gap: 8,
-              boxShadow: "0 14px 28px -8px rgba(31,111,235,0.45), 0 4px 8px rgba(11,26,36,0.12)",
-              fontFamily: MS_TOKENS.fontDisplay, fontWeight: 600, fontSize: 15, letterSpacing: "-0.01em", zIndex: 10,
+              display: "flex", alignItems: "center", gap: 6,
+              boxShadow: "0 10px 22px -8px rgba(31,111,235,0.45), 0 3px 6px rgba(11,26,36,0.12)",
+              fontFamily: MS_TOKENS.fontDisplay, fontWeight: 600, fontSize: 13, letterSpacing: "-0.01em", zIndex: 10,
             }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
               <path d="M12 5v14M5 12h14" />
             </svg>
             Report Issue
@@ -305,20 +314,20 @@ function BottomSheetCard({ issue }: { issue: any }) {
   const T = MS_TOKENS;
   return (
     <Link href={`/issue/${issue.id}`}>
-      <div style={{ position: "absolute", left: 14, right: 90, bottom: 18, background: "#fff", borderRadius: 18, padding: 12, display: "flex", gap: 12, alignItems: "center", boxShadow: T.shadow.lg, cursor: "pointer", border: `1px solid ${T.ink[100]}` }}>
-        <div style={{ width: 4, alignSelf: "stretch", borderRadius: 4, background: T.urgent }} />
-        <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: `url(${issue.photo}) center/cover, ${T.ink[100]}` }} />
+      <div style={{ position: "absolute", left: 12, right: 12, bottom: 70, background: "#fff", borderRadius: 14, padding: 9, display: "flex", gap: 10, alignItems: "center", boxShadow: T.shadow.lg, cursor: "pointer", border: `1px solid ${T.ink[100]}` }}>
+        <div style={{ width: 3, alignSelf: "stretch", borderRadius: 4, background: T.urgent }} />
+        <div style={{ width: 44, height: 44, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: `url(${issue.photo}) center/cover, ${T.ink[100]}` }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: "flex", gap: 6, marginBottom: 3 }}>
+          <div style={{ display: "flex", gap: 5, marginBottom: 2 }}>
             <PriorityBadge priority={issue.priority} size="sm" />
             <StatusBadge status={issue.status} size="sm" />
           </div>
-          <div style={{ fontSize: 13, fontWeight: 600, color: T.ink[900], overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: T.ink[900], overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 }}>
             {issue.title}
           </div>
-          <div style={{ fontSize: 11, color: T.ink[500], marginTop: 1 }}>{issue.distance} · {issue.upvotes} upvotes</div>
+          <div style={{ fontSize: 10, color: T.ink[500], marginTop: 1 }}>{issue.distance} · {issue.upvotes} upvotes</div>
         </div>
-        <div style={{ width: 4, height: 32, borderRadius: 99, background: T.ink[200] }} />
+        <div style={{ width: 3, height: 26, borderRadius: 99, background: T.ink[200] }} />
       </div>
     </Link>
   );
