@@ -193,9 +193,6 @@ export default function LeafletMap({
   return (
     <>
       <style>{`
-        @import url("https://unpkg.com/leaflet@1.9.4/dist/leaflet.css");
-        @import url("https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css");
-        @import url("https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css");
         .leaflet-container { font-family: inherit; }
         .ms-issue-icon { display: flex; align-items: center; justify-content: center; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 2px solid rgba(255,255,255,0.8); }
         .ms-issue-icon-inner { transform: rotate(45deg); font-size: 11px; font-weight: 700; color: #fff; }
