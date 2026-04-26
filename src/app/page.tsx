@@ -5,28 +5,11 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { MS_TOKENS } from "~/lib/tokens";
 import { MSGetCat, getIcon } from "~/lib/data";
-import { StatusBadge, PriorityBadge, Upvote, IconBtn } from "~/components/ui";
-import { LahoreMap, MapPin } from "~/components/map";
+import { StatusBadge, PriorityBadge, Upvote } from "~/components/ui";
+import dynamic from "next/dynamic";
 import { useIssues } from "~/lib/api";
 
-const LAT_MIN = 31.45, LAT_MAX = 31.59;
-const LNG_MIN = 74.27, LNG_MAX = 74.46;
-const SVG_X_MIN = 160, SVG_X_MAX = 840;
-const SVG_Y_MIN = 210, SVG_Y_MAX = 580;
-
-function projectLatLng(lat: number | null | undefined, lng: number | null | undefined, idx = 0) {
-  if (lat == null || lng == null) {
-    const cols = 4;
-    const x = SVG_X_MIN + ((idx % cols) + 0.5) * ((SVG_X_MAX - SVG_X_MIN) / cols);
-    const y = SVG_Y_MIN + (Math.floor(idx / cols) + 0.5) * 80;
-    return { x, y };
-  }
-  const tx = (lng - LNG_MIN) / (LNG_MAX - LNG_MIN);
-  const ty = 1 - (lat - LAT_MIN) / (LAT_MAX - LAT_MIN);
-  const x = SVG_X_MIN + tx * (SVG_X_MAX - SVG_X_MIN);
-  const y = SVG_Y_MIN + ty * (SVG_Y_MAX - SVG_Y_MIN);
-  return { x, y };
-}
+const LeafletMap = dynamic(() => import("~/components/leaflet-map"), { ssr: false, loading: () => <div style={{ width: "100%", height: "100%", background: "#e8e0d0" }} /> });
 
 export default function HomePage() {
   const [view, setView] = useState<"map" | "list">("map");
@@ -40,13 +23,12 @@ export default function HomePage() {
     filter === "urgent" ? { priority: "URGENT" } : undefined
   );
 
-  const allMapped = useMemo(() => issues.map((issue: any, idx: number) => ({
+  const allMapped = useMemo(() => issues.map((issue: any) => ({
     ...issue,
     status: issue.status.toLowerCase(),
     priority: issue.priority.toLowerCase(),
     category: issue.category.toLowerCase(),
     distance: "0.5 km",
-    coords: projectLatLng(issue.lat, issue.lng, idx),
   })), [issues]);
 
   const displayedIssues = useMemo(() => {
@@ -198,49 +180,61 @@ export default function HomePage() {
         <>
           {/* Map view */}
           {view === "map" && (
-            <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-              <div style={{ position: "absolute", inset: 0 }}>
-                <LahoreMap width="100%" height="100%" viewBox="120 180 740 420" interactive>
-                  {displayedIssues.map((i: any) => {
+            <div style={{ flex: 1, position: "relative" }}>
+              <LeafletMap
+                center={[31.5204, 74.3587]}
+                zoom={13}
+                markers={displayedIssues
+                  .filter((i: any) => i.lat != null && i.lng != null)
+                  .map((i: any) => {
                     const cat = MSGetCat(i.category);
                     const isUrgent = i.priority === "urgent";
-                    const isSelected = selectedIssue?.id === i.id;
                     const color =
                       i.status === "resolved" ? MS_TOKENS.resolved
                       : i.status === "in_progress" ? MS_TOKENS.progress
                       : isUrgent ? MS_TOKENS.urgent
                       : cat.hue;
-                    return (
-                      <g key={i.id} style={{ cursor: "pointer" }} onClick={(e) => { e.stopPropagation(); setSelectedId(i.id); }}>
-                        {isSelected && (
-                          <circle cx={i.coords.x} cy={i.coords.y - 12} r={26} fill="none" stroke={color} strokeWidth={2} opacity={0.6} />
-                        )}
-                        <MapPin x={i.coords.x} y={i.coords.y} color={color} pulse={isUrgent && i.status !== "resolved"} glyph={cat.label[0]} size={isSelected ? 28 : 22} />
-                      </g>
-                    );
+                    return {
+                      id: i.id,
+                      lat: i.lat,
+                      lng: i.lng,
+                      color,
+                      title: i.title,
+                      status: i.status,
+                      priority: i.priority,
+                      selected: selectedIssue?.id === i.id,
+                      onClick: () => setSelectedId(i.id),
+                    };
                   })}
-                </LahoreMap>
-              </div>
+                style={{ position: "absolute", inset: 0 }}
+              />
 
-              <AIBanner urgentCount={displayedIssues.filter((i: any) => i.priority === "urgent" && i.status !== "resolved").length} totalCount={displayedIssues.length} />
-              {selectedIssue && <BottomSheetCard issue={selectedIssue} />}
-
-              <div style={{ position: "absolute", right: 14, top: 14, display: "flex", flexDirection: "column", gap: 8 }}>
-                <IconBtn label="Layers">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 3l9 5-9 5-9-5 9-5z" /><path d="M3 13l9 5 9-5" /><path d="M3 18l9 5 9-5" />
-                  </svg>
-                </IconBtn>
-                <IconBtn label="Locate">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-                  </svg>
-                </IconBtn>
-              </div>
-
-              {/* zoom hint */}
-              <div style={{ position: "absolute", left: 14, bottom: 100, background: "rgba(255,255,255,0.82)", backdropFilter: "blur(8px)", padding: "4px 10px", borderRadius: 8, fontSize: 10, color: MS_TOKENS.ink[500], fontFamily: MS_TOKENS.fontMono, letterSpacing: "0.06em", pointerEvents: "none" }}>
-                DRAG · PINCH TO ZOOM
+              {/* Overlays on top of map */}
+              <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 1000 }}>
+                <AIBanner urgentCount={displayedIssues.filter((i: any) => i.priority === "urgent" && i.status !== "resolved").length} totalCount={displayedIssues.length} />
+                {selectedIssue && (
+                  <div style={{ pointerEvents: "auto" }}>
+                    <BottomSheetCard issue={selectedIssue} />
+                  </div>
+                )}
+                <Link href="/report" style={{ pointerEvents: "auto" }}>
+                  <button
+                    style={{
+                      all: "unset", cursor: "pointer",
+                      position: "absolute", right: 18, bottom: 18,
+                      height: 56, padding: "0 22px 0 18px", borderRadius: 99,
+                      background: MS_TOKENS.blue[600], color: "#fff",
+                      display: "flex", alignItems: "center", gap: 8,
+                      boxShadow: "0 14px 28px -8px rgba(31,111,235,0.45), 0 4px 8px rgba(11,26,36,0.12)",
+                      fontFamily: MS_TOKENS.fontDisplay, fontWeight: 600, fontSize: 15, letterSpacing: "-0.01em",
+                    }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    Report Issue
+                  </button>
+                </Link>
               </div>
             </div>
           )}
@@ -267,24 +261,26 @@ export default function HomePage() {
         </>
       )}
 
-      {/* FAB */}
-      <Link href="/report">
-        <button
-          style={{
-            all: "unset", cursor: "pointer", position: "absolute", right: 18, bottom: 22,
-            height: 56, padding: "0 22px 0 18px", borderRadius: 99,
-            background: MS_TOKENS.blue[600], color: "#fff",
-            display: "flex", alignItems: "center", gap: 8,
-            boxShadow: "0 14px 28px -8px rgba(31,111,235,0.45), 0 4px 8px rgba(11,26,36,0.12)",
-            fontFamily: MS_TOKENS.fontDisplay, fontWeight: 600, fontSize: 15, letterSpacing: "-0.01em", zIndex: 10,
-          }}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          Report Issue
-        </button>
-      </Link>
+      {/* FAB for list view */}
+      {view === "list" && (
+        <Link href="/report">
+          <button
+            style={{
+              all: "unset", cursor: "pointer", position: "absolute", right: 18, bottom: 22,
+              height: 56, padding: "0 22px 0 18px", borderRadius: 99,
+              background: MS_TOKENS.blue[600], color: "#fff",
+              display: "flex", alignItems: "center", gap: 8,
+              boxShadow: "0 14px 28px -8px rgba(31,111,235,0.45), 0 4px 8px rgba(11,26,36,0.12)",
+              fontFamily: MS_TOKENS.fontDisplay, fontWeight: 600, fontSize: 15, letterSpacing: "-0.01em", zIndex: 10,
+            }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            Report Issue
+          </button>
+        </Link>
+      )}
     </div>
   );
 }
@@ -309,7 +305,7 @@ function BottomSheetCard({ issue }: { issue: any }) {
   const T = MS_TOKENS;
   return (
     <Link href={`/issue/${issue.id}`}>
-      <div style={{ position: "absolute", left: 14, right: 14, bottom: 90, background: "#fff", borderRadius: 18, padding: 12, display: "flex", gap: 12, alignItems: "center", boxShadow: T.shadow.lg, cursor: "pointer", border: `1px solid ${T.ink[100]}` }}>
+      <div style={{ position: "absolute", left: 14, right: 90, bottom: 18, background: "#fff", borderRadius: 18, padding: 12, display: "flex", gap: 12, alignItems: "center", boxShadow: T.shadow.lg, cursor: "pointer", border: `1px solid ${T.ink[100]}` }}>
         <div style={{ width: 4, alignSelf: "stretch", borderRadius: 4, background: T.urgent }} />
         <div style={{ width: 56, height: 56, borderRadius: 12, overflow: "hidden", flexShrink: 0, background: `url(${issue.photo}) center/cover, ${T.ink[100]}` }} />
         <div style={{ flex: 1, minWidth: 0 }}>

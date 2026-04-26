@@ -6,24 +6,13 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { MS_TOKENS } from "~/lib/tokens";
 import { MSGetCat, getIcon, MSCategories } from "~/lib/data";
-import { LahoreMap, MapPin } from "~/components/map";
+import dynamic from "next/dynamic";
+
+const LeafletMap = dynamic(() => import("~/components/leaflet-map"), { ssr: false, loading: () => <div style={{ width: "100%", height: "100%", background: "#e8e0d0", borderRadius: 12 }} /> });
 import { UploadButton } from "~/lib/uploadthing";
 import { createIssue } from "~/lib/api";
 
 const LAT_MIN = 31.45, LAT_MAX = 31.59, LNG_MIN = 74.27, LNG_MAX = 74.46;
-const X_MIN = 160, X_MAX = 840, Y_MIN = 210, Y_MAX = 580;
-
-function latlngToSvg(lat: number, lng: number) {
-  const tx = (lng - LNG_MIN) / (LNG_MAX - LNG_MIN);
-  const ty = 1 - (lat - LAT_MIN) / (LAT_MAX - LAT_MIN);
-  return { x: X_MIN + tx * (X_MAX - X_MIN), y: Y_MIN + ty * (Y_MAX - Y_MIN) };
-}
-
-function svgToLatLng(x: number, y: number) {
-  const lng = LNG_MIN + ((x - X_MIN) / (X_MAX - X_MIN)) * (LNG_MAX - LNG_MIN);
-  const lat = LAT_MAX - ((y - Y_MIN) / (Y_MAX - Y_MIN)) * (LAT_MAX - LAT_MIN);
-  return { lat, lng };
-}
 
 const LAHORE_AREAS: Record<string, string> = {
   Gulberg: "Gulberg",
@@ -59,6 +48,7 @@ export default function ReportPage() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [rewriteLoading, setRewriteLoading] = useState(false);
+  const [similarIssues, setSimilarIssues] = useState<any[]>([]);
 
   const [lat, setLat] = useState(31.5125);
   const [lng, setLng] = useState(74.3434);
@@ -85,13 +75,6 @@ export default function ReportPage() {
     );
   }, []);
 
-  const pinCoords = latlngToSvg(lat, lng);
-  const centerX = pinCoords.x;
-  const centerY = pinCoords.y;
-  const vbX = Math.max(160, Math.min(800, centerX - 100));
-  const vbY = Math.max(210, Math.min(520, centerY - 65));
-  const mapViewBox = `${vbX} ${vbY} 200 130`;
-
   const handleImageUpload = useCallback(async (url: string) => {
     setPhotoUrl(url);
     setAiThinking(true);
@@ -115,9 +98,16 @@ export default function ReportPage() {
                 POTHOLE: "pothole", GARBAGE: "garbage", TRAFFIC: "traffic",
                 STREETLIGHT: "streetlight", SEWAGE: "sewage", WATER: "water", OTHER: "other",
               };
-              setAiCategory(catMap[data.category] ?? "other");
+              const detectedCat = catMap[data.category] ?? "other";
+              setAiCategory(detectedCat);
               setAiPriority(data.priority?.toLowerCase() ?? "medium");
               if (data.description && !desc) setDesc(data.description);
+              // Check for similar open issues
+              const area = areaFromLatLng(lat, lng);
+              fetch(`/api/issues/similar?category=${data.category}&area=${encodeURIComponent(area)}`)
+                .then((r) => r.json())
+                .then(setSimilarIssues)
+                .catch(() => {});
             }
           }
         }
@@ -148,23 +138,6 @@ export default function ReportPage() {
           setRewriteLoading(false);
         }
       }, 1500);
-    }
-  };
-
-  const handleMapClick = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (locked) return;
-    const svg = e.currentTarget;
-    const rect = svg.getBoundingClientRect();
-    const svgW = rect.width;
-    const svgH = rect.height;
-    const [vx, vy, vw, vh] = mapViewBox.split(" ").map(Number) as [number, number, number, number];
-    const svgX = vx + ((e.clientX - rect.left) / svgW) * vw;
-    const svgY = vy + ((e.clientY - rect.top) / svgH) * vh;
-    const { lat: newLat, lng: newLng } = svgToLatLng(svgX, svgY);
-    if (newLat >= LAT_MIN && newLat <= LAT_MAX && newLng >= LNG_MIN && newLng <= LNG_MAX) {
-      setLat(newLat);
-      setLng(newLng);
-      setLocationLabel(`${areaFromLatLng(newLat, newLng)} · ${newLat.toFixed(4)}° N, ${newLng.toFixed(4)}° E`);
     }
   };
 
@@ -281,6 +254,20 @@ export default function ReportPage() {
           <AICategoryCard category={cat} CatIcon={CatIcon} aiPriority={aiPriority} onChange={(id) => setAiCategory(id)} />
         )}
 
+        {/* Duplicate detection warning */}
+        {similarIssues.length > 0 && (
+          <div style={{ background: "#FFFDE7", border: "1px solid #FDD835", borderRadius: 14, padding: "10px 14px", marginBottom: 14 }}>
+            <div style={{ fontFamily: T.fontMono, fontSize: 9, color: "#F57F17", letterSpacing: "0.12em", marginBottom: 6 }}>⚠ SIMILAR ISSUES ALREADY REPORTED</div>
+            <div style={{ fontSize: 12, color: "#795548", marginBottom: 8 }}>Consider upvoting an existing report instead of creating a duplicate.</div>
+            {similarIssues.map((s) => (
+              <a key={s.id} href={`/issue/${s.id}`} target="_blank" rel="noreferrer" style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", background: "#fff", borderRadius: 8, marginBottom: 4, textDecoration: "none" }}>
+                <span style={{ fontSize: 12, color: "#4E342E", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</span>
+                <span style={{ fontFamily: T.fontMono, fontSize: 10, color: "#9E9E9E", flexShrink: 0 }}>▲ {s.upvotes}</span>
+              </a>
+            ))}
+          </div>
+        )}
+
         {/* Location */}
         <div style={{ background: "#fff", borderRadius: 16, padding: 12, marginBottom: 14, border: `1px solid ${T.ink[100]}`, boxShadow: T.shadow.sm }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
@@ -295,39 +282,25 @@ export default function ReportPage() {
               {locked ? "✓ Locked" : "Tap map to adjust"}
             </button>
           </div>
-          <div style={{ height: 130, borderRadius: 12, overflow: "hidden", position: "relative", border: `1px solid ${T.ink[100]}`, cursor: locked ? "default" : "crosshair" }}>
-            <LahoreMap
-              width="100%"
-              height="100%"
-              viewBox={mapViewBox}
-              showLabels={false}
-              showLandmarks={false}
-            >
-              <MapPin x={pinCoords.x} y={pinCoords.y} color={T.urgent} pulse glyph={cat.label[0]} />
-              {/* invisible overlay for click */}
-              {!locked && (
-                <rect
-                  x={Number(mapViewBox.split(" ")[0])}
-                  y={Number(mapViewBox.split(" ")[1])}
-                  width={200} height={130}
-                  fill="transparent"
-                  style={{ cursor: "crosshair" }}
-                  onClick={(e) => {
-                    const svg = (e.target as SVGRectElement).ownerSVGElement!;
-                    const rect = svg.getBoundingClientRect();
-                    const [vx, vy, vw, vh] = mapViewBox.split(" ").map(Number) as [number, number, number, number];
-                    const svgX = vx + ((e.clientX - rect.left) / rect.width) * vw;
-                    const svgY = vy + ((e.clientY - rect.top) / rect.height) * vh;
-                    const { lat: newLat, lng: newLng } = svgToLatLng(svgX, svgY);
-                    if (newLat >= LAT_MIN && newLat <= LAT_MAX && newLng >= LNG_MIN && newLng <= LNG_MAX) {
-                      setLat(newLat);
-                      setLng(newLng);
-                      setLocationLabel(`${areaFromLatLng(newLat, newLng)} · ${newLat.toFixed(4)}° N, ${newLng.toFixed(4)}° E`);
-                    }
-                  }}
-                />
-              )}
-            </LahoreMap>
+          <div style={{ height: 200, borderRadius: 12, overflow: "hidden", position: "relative", border: `1px solid ${T.ink[100]}` }}>
+            <LeafletMap
+              center={[lat, lng]}
+              zoom={15}
+              pinLat={lat}
+              pinLng={lng}
+              pinColor={T.urgent}
+              onMapClick={locked ? undefined : (newLat, newLng) => {
+                setLat(newLat);
+                setLng(newLng);
+                setLocationLabel(`${areaFromLatLng(newLat, newLng)} · ${newLat.toFixed(4)}° N, ${newLng.toFixed(4)}° E`);
+              }}
+              style={{ width: "100%", height: "100%" }}
+            />
+            {!locked && (
+              <div style={{ position: "absolute", top: 8, right: 8, background: "rgba(255,255,255,0.9)", backdropFilter: "blur(6px)", padding: "4px 8px", borderRadius: 6, fontSize: 10, color: T.ink[600], fontFamily: T.fontMono, pointerEvents: "none", zIndex: 1000 }}>
+                TAP TO PIN
+              </div>
+            )}
           </div>
           <div style={{ marginTop: 10, fontSize: 13, color: T.ink[800], fontWeight: 500 }}>{locationLabel}</div>
           <div style={{ fontSize: 11, color: T.ink[500], fontFamily: T.fontMono, marginTop: 2 }}>

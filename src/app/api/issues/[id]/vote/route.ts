@@ -32,19 +32,20 @@ export async function POST(
       return NextResponse.json({ voted: false });
     }
 
-    await db.vote.create({
-      data: {
-        issueId: id,
-        userId,
-      },
-    });
+    await db.vote.create({ data: { issueId: id, userId } });
 
-    await db.issue.update({
+    const updated = await db.issue.update({
       where: { id },
       data: { upvotes: { increment: 1 } },
+      select: { upvotes: true, priority: true },
     });
 
-    return NextResponse.json({ voted: true });
+    // Auto-escalate to URGENT when votes cross 50
+    if (updated.upvotes >= 50 && updated.priority !== "URGENT") {
+      await db.issue.update({ where: { id }, data: { priority: "URGENT" } });
+    }
+
+    return NextResponse.json({ voted: true, escalated: updated.upvotes >= 50 && updated.priority !== "URGENT" });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

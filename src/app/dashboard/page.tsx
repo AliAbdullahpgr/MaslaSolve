@@ -5,7 +5,9 @@ import Link from "next/link";
 import { MS_TOKENS } from "~/lib/tokens";
 import { MSGetCat, getIcon } from "~/lib/data";
 import { StatusBadge, PriorityBadge } from "~/components/ui";
-import { LahoreMap, MapPin } from "~/components/map";
+import dynamic from "next/dynamic";
+
+const LeafletMap = dynamic(() => import("~/components/leaflet-map"), { ssr: false, loading: () => <div style={{ width: "100%", height: "100%", background: "#e8e0d0" }} /> });
 import { useIssues } from "~/lib/api";
 
 const AREAS = ["All Lahore", "Gulberg", "DHA", "Cantt", "Old Lahore", "Iqbal Town", "Johar Town"];
@@ -35,28 +37,16 @@ export default function DashboardPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const LAT_MIN = 31.45, LAT_MAX = 31.59, LNG_MIN = 74.27, LNG_MAX = 74.46;
-  const X_MIN = 160, X_MAX = 840, Y_MIN = 210, Y_MAX = 580;
-  const project = (lat: number | null | undefined, lng: number | null | undefined, idx: number) => {
-    if (lat == null || lng == null) {
-      return { x: X_MIN + ((idx % 4) + 0.5) * ((X_MAX - X_MIN) / 4), y: Y_MIN + (Math.floor(idx / 4) + 0.5) * 80 };
-    }
-    const tx = (lng - LNG_MIN) / (LNG_MAX - LNG_MIN);
-    const ty = 1 - (lat - LAT_MIN) / (LAT_MAX - LAT_MIN);
-    return { x: X_MIN + tx * (X_MAX - X_MIN), y: Y_MIN + ty * (Y_MAX - Y_MIN) };
-  };
-
   const [localIssues, setLocalIssues] = useState<any[]>([]);
   React.useEffect(() => { setLocalIssues(issues); }, [issues]);
 
   const displayedIssues = useMemo(() => {
     return localIssues
-      .map((issue: any, idx: number) => ({
+      .map((issue: any) => ({
         ...issue,
         statusLower: issue.status.toLowerCase(),
         priorityLower: issue.priority.toLowerCase(),
         categoryLower: issue.category.toLowerCase(),
-        coords: project(issue.lat, issue.lng, idx),
       }))
       .filter((i) => {
         if (areaFilter !== "All Lahore" && i.area !== areaFilter) return false;
@@ -235,33 +225,24 @@ export default function DashboardPage() {
               </div>
             </div>
             <div style={{ flex: 1, position: "relative", minHeight: 280 }}>
-              <LahoreMap width="100%" height="100%" mood="cool">
-                <g style={{ filter: "blur(18px)", mixBlendMode: "multiply" }}>
-                  <circle cx="540" cy="360" r="60" fill="#D83A1F" opacity="0.6" />
-                  <circle cx="620" cy="420" r="50" fill="#D83A1F" opacity="0.5" />
-                  <circle cx="760" cy="470" r="46" fill="#E85D2C" opacity="0.45" />
-                  <circle cx="360" cy="410" r="42" fill="#C68A12" opacity="0.5" />
-                  <circle cx="280" cy="480" r="34" fill="#C68A12" opacity="0.4" />
-                  <circle cx="470" cy="320" r="34" fill="#1B7F4D" opacity="0.4" />
-                </g>
-                {displayedIssues.map((i) => (
-                  <g key={i.id} style={{ cursor: "pointer" }} onClick={() => setSelectedId(i.id)}>
-                    <MapPin
-                      x={i.coords.x}
-                      y={i.coords.y}
-                      color={i.priorityLower === "urgent" ? T.urgent : i.statusLower === "resolved" ? T.resolved : T.progress}
-                      size={selectedId === i.id ? 22 : 16}
-                    />
-                  </g>
-                ))}
-              </LahoreMap>
-              <div style={{ position: "absolute", left: 12, bottom: 12, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(8px)", padding: "8px 10px", borderRadius: 8, fontSize: 11, border: `1px solid ${T.ink[200]}` }}>
-                <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.ink[500], letterSpacing: "0.1em", marginBottom: 4 }}>DENSITY</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 80, height: 6, borderRadius: 3, background: "linear-gradient(90deg, #D8EBDD, #F7E7BD, #D83A1F)" }} />
-                  <span style={{ color: T.ink[500] }}>low → high</span>
-                </div>
-              </div>
+              <LeafletMap
+                center={[31.5204, 74.3587]}
+                zoom={12}
+                markers={displayedIssues
+                  .filter((i) => i.lat != null && i.lng != null)
+                  .map((i) => ({
+                    id: i.id,
+                    lat: i.lat,
+                    lng: i.lng,
+                    color: i.priorityLower === "urgent" ? T.urgent : i.statusLower === "resolved" ? T.resolved : T.progress,
+                    title: i.title,
+                    status: i.statusLower,
+                    priority: i.priorityLower,
+                    selected: selectedId === i.id,
+                    onClick: () => setSelectedId(i.id),
+                  }))}
+                style={{ width: "100%", height: "100%" }}
+              />
             </div>
           </div>
         </div>
