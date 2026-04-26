@@ -47,11 +47,20 @@ export default function LeafletMap({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    let L: any;
-    let MC: any;
-    Promise.all([import("leaflet"), import("leaflet.markercluster")]).then(([mod]) => {
-      L = mod.default;
-      MC = (window as any).L?.MarkerClusterGroup ?? L.markerClusterGroup;
+    let cancelled = false;
+
+    const initMap = async () => {
+      const mod = await import("leaflet");
+      const L = mod.default;
+      (window as any).L = L;
+
+      try {
+        await import("leaflet.markercluster");
+      } catch (error) {
+        console.warn("Leaflet marker clustering failed to load. Rendering markers without clustering.", error);
+      }
+
+      if (cancelled || !containerRef.current || mapRef.current) return;
 
       // Fix default icon paths broken by webpack
       delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -88,24 +97,27 @@ export default function LeafletMap({
       mapRef.current = map;
 
       // Create cluster group for issue markers
-      const clusterGroup = L.markerClusterGroup({
-        maxClusterRadius: 40,
-        iconCreateFunction: (cluster: any) => {
-          const count = cluster.getChildCount();
-          const size = count < 10 ? 32 : count < 50 ? 38 : 44;
-          return L.divIcon({
-            html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#0b1a24;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${size < 38 ? 12 : 14}px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${count}</div>`,
-            className: "",
-            iconSize: [size, size],
-            iconAnchor: [size / 2, size / 2],
-          });
-        },
-        spiderfyOnMaxZoom: true,
-        showCoverageOnHover: false,
-        zoomToBoundsOnClick: true,
-      });
-      clusterGroup.addTo(map);
-      (mapRef.current as any)._clusterGroup = clusterGroup;
+      const markerLayer =
+        typeof L.markerClusterGroup === "function"
+          ? L.markerClusterGroup({
+              maxClusterRadius: 40,
+              iconCreateFunction: (cluster: any) => {
+                const count = cluster.getChildCount();
+                const size = count < 10 ? 32 : count < 50 ? 38 : 44;
+                return L.divIcon({
+                  html: `<div style="width:${size}px;height:${size}px;border-radius:50%;background:#0b1a24;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${size < 38 ? 12 : 14}px;border:2px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);">${count}</div>`,
+                  className: "",
+                  iconSize: [size, size],
+                  iconAnchor: [size / 2, size / 2],
+                });
+              },
+              spiderfyOnMaxZoom: true,
+              showCoverageOnHover: false,
+              zoomToBoundsOnClick: true,
+            })
+          : L.layerGroup();
+      markerLayer.addTo(map);
+      (mapRef.current as any)._clusterGroup = markerLayer;
 
       // Add initial pin marker if provided
       if (pinLat != null && pinLng != null) {
@@ -120,10 +132,15 @@ export default function LeafletMap({
       }
 
       // Add issue markers to cluster group
-      markers.forEach((m) => addIssueMarker(L, clusterGroup, m, markerRefs));
+      markers.forEach((m) => addIssueMarker(L, markerLayer, m, markerRefs));
+    };
+
+    initMap().catch((error) => {
+      console.error("Failed to initialize Leaflet map", error);
     });
 
     return () => {
+      cancelled = true;
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
