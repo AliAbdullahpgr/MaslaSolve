@@ -177,10 +177,10 @@ export default function HomePage() {
           </div>
         </div>
       ) : (
-        <>
+        <div style={{ flex: "1 1 0", display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
           {/* Map view */}
           {view === "map" && (
-            <div style={{ flex: 1, position: "relative" }}>
+            <div style={{ flex: "1 1 0", position: "relative", overflow: "hidden" }}>
               <LeafletMap
                 center={[31.5204, 74.3587]}
                 zoom={13}
@@ -206,7 +206,7 @@ export default function HomePage() {
                       onClick: () => setSelectedId(i.id),
                     };
                   })}
-                style={{ position: "absolute", inset: 0 }}
+                style={{ position: "absolute", inset: 0, height: "100%", width: "100%" }}
               />
 
               {/* Overlays on top of map */}
@@ -258,7 +258,7 @@ export default function HomePage() {
               )}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {/* FAB for list view */}
