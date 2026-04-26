@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Account {
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?
+  access_token             String?
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?
+  session_state            String?
+  refresh_token_expires_in Int?
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  password      String?
+  image         String?
+  phone         String?
+  role          UserRole  @default(CITIZEN)
+  accounts      Account[]
+  sessions      Session[]
+  issues        Issue[]
+  comments      Comment[]
+  votes         Vote[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Issue {
+  id            String         @id @default(cuid())
+  title         String
+  description   String
+  category      CategoryType
+  status        IssueStatus    @default(REPORTED)
+  priority      Priority       @default(MEDIUM)
+  location      String
+  area          String
+  lat           Float?
+  lng           Float?
+  photo         String?
+  resolvedPhoto String?
+  upvotes       Int            @default(0)
+  views         Int            @default(0)
+  isAnonymous   Boolean        @default(false)
+  reporterId    String?
+  reporter      User?          @relation(fields: [reporterId], references: [id])
+  timeline      TimelineItem[]
+  comments      Comment[]
+  votes         Vote[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([status])
+  @@index([category])
+  @@index([area])
+  @@index([createdAt])
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  body       String
+  issueId    String
+  issue      Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id])
+  upvotes    Int      @default(0)
+  isOfficial Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([issueId])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([issueId, userId])
+}
+
+model TimelineItem {
+  id        String   @id @default(cuid())
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  label     String
+  note      String?
+  done      Boolean  @default(false)
+  timestamp DateTime @default(now())
+
+  @@index([issueId])
+}
+
+enum UserRole {
+  CITIZEN
+  ADMIN
+  CREW
+}
+
+enum CategoryType {
+  POTHOLE
+  GARBAGE
+  TRAFFIC
+  STREETLIGHT
+  SEWAGE
+  WATER
+  OTHER
+}
+
+enum IssueStatus {
+  REPORTED
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+enum Priority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
