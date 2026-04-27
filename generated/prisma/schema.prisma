@@ -74,6 +74,7 @@ model Issue {
   lng           Float?
   photo         String?
   resolvedPhoto String?
+  embedding     Float[]        @default([])
   upvotes       Int            @default(0)
   views         Int            @default(0)
   isAnonymous   Boolean        @default(false)

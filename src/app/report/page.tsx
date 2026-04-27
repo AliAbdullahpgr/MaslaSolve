@@ -14,6 +14,7 @@ const LeafletMap = dynamic(() => import("~/components/leaflet-map"), {
   ssr: false,
   loading: () => <div style={{ width: "100%", height: "100%", background: "#e8e0d0", borderRadius: 12 }} />,
 });
+const VoiceReport = dynamic(() => import("~/components/voice-report"), { ssr: false });
 
 const LAT_MIN = 31.45, LAT_MAX = 31.59, LNG_MIN = 74.27, LNG_MAX = 74.46;
 
@@ -119,14 +120,31 @@ export default function ReportPage() {
     );
   }, []);
 
-  const fetchSimilar = useCallback((category: string) => {
+  const fetchSimilar = useCallback((category: string, titleArg?: string, descArg?: string) => {
     const area = areaFromLatLng(lat, lng);
-    const params = new URLSearchParams({ category, area, lat: String(lat), lng: String(lng) });
+    const params = new URLSearchParams({
+      category, area,
+      lat: String(lat), lng: String(lng),
+      title: titleArg ?? manualTitle ?? "",
+      description: descArg ?? desc ?? "",
+    });
     fetch(`/api/issues/similar?${params}`)
       .then((r) => r.json())
       .then(setSimilarIssues)
       .catch(() => {});
-  }, [lat, lng]);
+  }, [lat, lng, manualTitle, desc]);
+
+  // Debounced refetch of similar issues whenever description, title, or category changes
+  const similarTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!desc && !manualTitle) return;
+    if (similarTimer.current) clearTimeout(similarTimer.current);
+    similarTimer.current = setTimeout(() => {
+      const cat = (showManual || photoSkipped ? manualCategory : aiCategory).toUpperCase();
+      fetchSimilar(cat, manualTitle, desc);
+    }, 700);
+    return () => { if (similarTimer.current) clearTimeout(similarTimer.current); };
+  }, [desc, manualTitle, manualCategory, aiCategory, showManual, photoSkipped, fetchSimilar]);
 
   const handleImageUpload = useCallback(async (url: string) => {
     setPhotoUrl(url);
@@ -383,6 +401,32 @@ export default function ReportPage() {
           </div>
           {errors.photo && <FieldError>{errors.photo}</FieldError>}
 
+          {/* ── VOICE REPORT (Urdu / Roman Urdu / English) ── */}
+          <div style={{ marginTop: 14 }}>
+            <SectionLabel>🎙️ Speak it instead</SectionLabel>
+            <VoiceReport
+              onResult={(r) => {
+                const catMap: Record<string, string> = {
+                  POTHOLE: "pothole", GARBAGE: "garbage", TRAFFIC: "traffic",
+                  STREETLIGHT: "streetlight", SEWAGE: "sewage", WATER: "water", OTHER: "other",
+                };
+                const detected = catMap[r.category] ?? "other";
+                setManualCategory(detected);
+                setAiCategory(detected);
+                setManualPriority(r.priority?.toLowerCase() ?? "medium");
+                setAiPriority(r.priority?.toLowerCase() ?? "medium");
+                if (r.title) setManualTitle(r.title);
+                if (r.description) setDesc(r.description);
+                // If user spoke without uploading a photo, switch to skip-photo mode so the
+                // form is valid on submit.
+                if (!photoUrl) {
+                  setPhotoSkipped(true);
+                  setShowManual(true);
+                }
+              }}
+            />
+          </div>
+
           {/* ── AI CATEGORY (when photo present) ── */}
           {hasPhoto && !aiThinking && (
             <div style={{ background: "#fff", borderRadius: 14, padding: 12, marginBottom: 14, border: `1px solid ${T.ink[200]}`, boxShadow: T.shadow.sm }}>
@@ -488,17 +532,31 @@ export default function ReportPage() {
             </div>
           )}
 
-          {/* ── DUPLICATE WARNING ── */}
+          {/* ── DUPLICATE WARNING (semantic embeddings) ── */}
           {similarIssues.length > 0 && (
             <div style={{ background: "#FFFDE7", border: "1px solid #FDD835", borderRadius: 14, padding: "10px 14px", marginBottom: 14 }}>
-              <div style={{ fontFamily: T.fontMono, fontSize: 9, color: "#F57F17", letterSpacing: "0.12em", marginBottom: 6 }}>⚠ SIMILAR ISSUES ALREADY OPEN</div>
-              <div style={{ fontSize: 12, color: "#795548", marginBottom: 8 }}>Consider upvoting an existing report instead of duplicating.</div>
-              {similarIssues.map((s) => (
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                <span style={{ fontFamily: T.fontMono, fontSize: 9, color: "#F57F17", letterSpacing: "0.12em" }}>
+                  ✱ AI FOUND {similarIssues.length} NEARBY MATCH{similarIssues.length === 1 ? "" : "ES"}
+                </span>
+              </div>
+              <div style={{ fontSize: 12, color: "#795548", marginBottom: 8 }}>
+                These look like the same problem. Upvote one instead of duplicating.
+              </div>
+              {similarIssues.map((s: any) => (
                 <a key={s.id} href={`/issue/${s.id}`} target="_blank" rel="noreferrer"
-                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", background: "#fff", borderRadius: 8, marginBottom: 4, textDecoration: "none" }}
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "#fff", borderRadius: 8, marginBottom: 4, textDecoration: "none", border: `1px solid ${T.ink[100]}` }}
                 >
-                  <span style={{ fontSize: 12, color: "#4E342E", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 10, color: "#9E9E9E", flexShrink: 0 }}>▲ {s.upvotes}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, color: "#4E342E", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</div>
+                    <div style={{ fontSize: 10, color: "#9E9E9E", marginTop: 2 }}>
+                      {typeof s.similarity === "number" && (
+                        <span style={{ fontFamily: T.fontMono }}>{Math.round(s.similarity * 100)}% match</span>
+                      )}
+                      {s.area ? <span> · {s.area}</span> : null}
+                    </div>
+                  </div>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.blue[600], flexShrink: 0, fontWeight: 600 }}>▲ {s.upvotes}</span>
                 </a>
               ))}
             </div>

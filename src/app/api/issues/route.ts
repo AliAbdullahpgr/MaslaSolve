@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "~/server/db";
 import { z } from "zod";
+import { embedIssueText } from "~/lib/gemini";
 
 const createIssueSchema = z.object({
   title: z.string().min(1),
@@ -45,10 +46,15 @@ export async function POST(request: Request) {
     const body = await request.json();
     const parsed = createIssueSchema.parse(body);
 
+    const description = parsed.description || "No description provided";
+    const embeddingText = `${parsed.category} | ${parsed.area} | ${parsed.title} | ${description}`;
+    const embedding = (await embedIssueText(embeddingText)) ?? [];
+
     const issue = await db.issue.create({
       data: {
         ...parsed,
-        description: parsed.description || "No description provided",
+        description,
+        embedding,
         status: "REPORTED",
         timeline: {
           create: [

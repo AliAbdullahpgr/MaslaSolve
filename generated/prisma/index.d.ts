@@ -6152,6 +6152,7 @@ export namespace Prisma {
   export type IssueAvgAggregateOutputType = {
     lat: number | null
     lng: number | null
+    embedding: number | null
     upvotes: number | null
     views: number | null
   }
@@ -6159,6 +6160,7 @@ export namespace Prisma {
   export type IssueSumAggregateOutputType = {
     lat: number | null
     lng: number | null
+    embedding: number[]
     upvotes: number | null
     views: number | null
   }
@@ -6218,6 +6220,7 @@ export namespace Prisma {
     lng: number
     photo: number
     resolvedPhoto: number
+    embedding: number
     upvotes: number
     views: number
     isAnonymous: number
@@ -6231,6 +6234,7 @@ export namespace Prisma {
   export type IssueAvgAggregateInputType = {
     lat?: true
     lng?: true
+    embedding?: true
     upvotes?: true
     views?: true
   }
@@ -6238,6 +6242,7 @@ export namespace Prisma {
   export type IssueSumAggregateInputType = {
     lat?: true
     lng?: true
+    embedding?: true
     upvotes?: true
     views?: true
   }
@@ -6297,6 +6302,7 @@ export namespace Prisma {
     lng?: true
     photo?: true
     resolvedPhoto?: true
+    embedding?: true
     upvotes?: true
     views?: true
     isAnonymous?: true
@@ -6405,6 +6411,7 @@ export namespace Prisma {
     lng: number | null
     photo: string | null
     resolvedPhoto: string | null
+    embedding: number[]
     upvotes: number
     views: number
     isAnonymous: boolean
@@ -6445,6 +6452,7 @@ export namespace Prisma {
     lng?: boolean
     photo?: boolean
     resolvedPhoto?: boolean
+    embedding?: boolean
     upvotes?: boolean
     views?: boolean
     isAnonymous?: boolean
@@ -6471,6 +6479,7 @@ export namespace Prisma {
     lng?: boolean
     photo?: boolean
     resolvedPhoto?: boolean
+    embedding?: boolean
     upvotes?: boolean
     views?: boolean
     isAnonymous?: boolean
@@ -6493,6 +6502,7 @@ export namespace Prisma {
     lng?: boolean
     photo?: boolean
     resolvedPhoto?: boolean
+    embedding?: boolean
     upvotes?: boolean
     views?: boolean
     isAnonymous?: boolean
@@ -6515,6 +6525,7 @@ export namespace Prisma {
     lng?: boolean
     photo?: boolean
     resolvedPhoto?: boolean
+    embedding?: boolean
     upvotes?: boolean
     views?: boolean
     isAnonymous?: boolean
@@ -6523,7 +6534,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }
 
-  export type IssueOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "title" | "description" | "category" | "status" | "priority" | "location" | "area" | "lat" | "lng" | "photo" | "resolvedPhoto" | "upvotes" | "views" | "isAnonymous" | "reporterId" | "createdAt" | "updatedAt", ExtArgs["result"]["issue"]>
+  export type IssueOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "title" | "description" | "category" | "status" | "priority" | "location" | "area" | "lat" | "lng" | "photo" | "resolvedPhoto" | "embedding" | "upvotes" | "views" | "isAnonymous" | "reporterId" | "createdAt" | "updatedAt", ExtArgs["result"]["issue"]>
   export type IssueInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     reporter?: boolean | Issue$reporterArgs<ExtArgs>
     timeline?: boolean | Issue$timelineArgs<ExtArgs>
@@ -6559,6 +6570,7 @@ export namespace Prisma {
       lng: number | null
       photo: string | null
       resolvedPhoto: string | null
+      embedding: number[]
       upvotes: number
       views: number
       isAnonymous: boolean
@@ -7004,6 +7016,7 @@ export namespace Prisma {
     readonly lng: FieldRef<"Issue", 'Float'>
     readonly photo: FieldRef<"Issue", 'String'>
     readonly resolvedPhoto: FieldRef<"Issue", 'String'>
+    readonly embedding: FieldRef<"Issue", 'Float[]'>
     readonly upvotes: FieldRef<"Issue", 'Int'>
     readonly views: FieldRef<"Issue", 'Int'>
     readonly isAnonymous: FieldRef<"Issue", 'Boolean'>
@@ -10859,6 +10872,7 @@ export namespace Prisma {
     lng: 'lng',
     photo: 'photo',
     resolvedPhoto: 'resolvedPhoto',
+    embedding: 'embedding',
     upvotes: 'upvotes',
     views: 'views',
     isAnonymous: 'isAnonymous',
@@ -11356,6 +11370,7 @@ export namespace Prisma {
     lng?: FloatNullableFilter<"Issue"> | number | null
     photo?: StringNullableFilter<"Issue"> | string | null
     resolvedPhoto?: StringNullableFilter<"Issue"> | string | null
+    embedding?: FloatNullableListFilter<"Issue">
     upvotes?: IntFilter<"Issue"> | number
     views?: IntFilter<"Issue"> | number
     isAnonymous?: BoolFilter<"Issue"> | boolean
@@ -11381,6 +11396,7 @@ export namespace Prisma {
     lng?: SortOrderInput | SortOrder
     photo?: SortOrderInput | SortOrder
     resolvedPhoto?: SortOrderInput | SortOrder
+    embedding?: SortOrder
     upvotes?: SortOrder
     views?: SortOrder
     isAnonymous?: SortOrder
@@ -11409,6 +11425,7 @@ export namespace Prisma {
     lng?: FloatNullableFilter<"Issue"> | number | null
     photo?: StringNullableFilter<"Issue"> | string | null
     resolvedPhoto?: StringNullableFilter<"Issue"> | string | null
+    embedding?: FloatNullableListFilter<"Issue">
     upvotes?: IntFilter<"Issue"> | number
     views?: IntFilter<"Issue"> | number
     isAnonymous?: BoolFilter<"Issue"> | boolean
@@ -11434,6 +11451,7 @@ export namespace Prisma {
     lng?: SortOrderInput | SortOrder
     photo?: SortOrderInput | SortOrder
     resolvedPhoto?: SortOrderInput | SortOrder
+    embedding?: SortOrder
     upvotes?: SortOrder
     views?: SortOrder
     isAnonymous?: SortOrder
@@ -11463,6 +11481,7 @@ export namespace Prisma {
     lng?: FloatNullableWithAggregatesFilter<"Issue"> | number | null
     photo?: StringNullableWithAggregatesFilter<"Issue"> | string | null
     resolvedPhoto?: StringNullableWithAggregatesFilter<"Issue"> | string | null
+    embedding?: FloatNullableListFilter<"Issue">
     upvotes?: IntWithAggregatesFilter<"Issue"> | number
     views?: IntWithAggregatesFilter<"Issue"> | number
     isAnonymous?: BoolWithAggregatesFilter<"Issue"> | boolean
@@ -11985,6 +12004,7 @@ export namespace Prisma {
     lng?: number | null
     photo?: string | null
     resolvedPhoto?: string | null
+    embedding?: IssueCreateembeddingInput | number[]
     upvotes?: number
     views?: number
     isAnonymous?: boolean
@@ -12009,6 +12029,7 @@ export namespace Prisma {
     lng?: number | null
     photo?: string | null
     resolvedPhoto?: string | null
+    embedding?: IssueCreateembeddingInput | number[]
     upvotes?: number
     views?: number
     isAnonymous?: boolean
@@ -12033,6 +12054,7 @@ export namespace Prisma {
     lng?: NullableFloatFieldUpdateOperationsInput | number | null
     photo?: NullableStringFieldUpdateOperationsInput | string | null
     resolvedPhoto?: NullableStringFieldUpdateOperationsInput | string | null
+    embedding?: IssueUpdateembeddingInput | number[]
     upvotes?: IntFieldUpdateOperationsInput | number
     views?: IntFieldUpdateOperationsInput | number
     isAnonymous?: BoolFieldUpdateOperationsInput | boolean
@@ -12057,6 +12079,7 @@ export namespace Prisma {
     lng?: NullableFloatFieldUpdateOperationsInput | number | null
     photo?: NullableStringFieldUpdateOperationsInput | string | null
     resolvedPhoto?: NullableStringFieldUpdateOperationsInput | string | null
+    embedding?: IssueUpdateembeddingInput | number[]
     upvotes?: IntFieldUpdateOperationsInput | number
     views?: IntFieldUpdateOperationsInput | number
     isAnonymous?: BoolFieldUpdateOperationsInput | boolean
@@ -12081,6 +12104,7 @@ export namespace Prisma {
     lng?: number | null
     photo?: string | null
     resolvedPhoto?: string | null
+    embedding?: IssueCreateembeddingInput | number[]
     upvotes?: number
     views?: number
     isAnonymous?: boolean
@@ -12102,6 +12126,7 @@ export namespace Prisma {
     lng?: NullableFloatFieldUpdateOperationsInput | number | null
     photo?: NullableStringFieldUpdateOperationsInput | string | null
     resolvedPhoto?: NullableStringFieldUpdateOperationsInput | string | null
+    embedding?: IssueUpdateembeddingInput | number[]
     upvotes?: IntFieldUpdateOperationsInput | number
     views?: IntFieldUpdateOperationsInput | number
     isAnonymous?: BoolFieldUpdateOperationsInput | boolean
@@ -12122,6 +12147,7 @@ export namespace Prisma {
     lng?: NullableFloatFieldUpdateOperationsInput | number | null
     photo?: NullableStringFieldUpdateOperationsInput | string | null
     resolvedPhoto?: NullableStringFieldUpdateOperationsInput | string | null
+    embedding?: IssueUpdateembeddingInput | number[]
     upvotes?: IntFieldUpdateOperationsInput | number
     views?: IntFieldUpdateOperationsInput | number
     isAnonymous?: BoolFieldUpdateOperationsInput | boolean
@@ -12712,6 +12738,14 @@ export namespace Prisma {
     not?: NestedFloatNullableFilter<$PrismaModel> | number | null
   }
 
+  export type FloatNullableListFilter<$PrismaModel = never> = {
+    equals?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    has?: number | FloatFieldRefInput<$PrismaModel> | null
+    hasEvery?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    hasSome?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    isEmpty?: boolean
+  }
+
   export type IntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[] | ListIntFieldRefInput<$PrismaModel>
@@ -12756,6 +12790,7 @@ export namespace Prisma {
     lng?: SortOrder
     photo?: SortOrder
     resolvedPhoto?: SortOrder
+    embedding?: SortOrder
     upvotes?: SortOrder
     views?: SortOrder
     isAnonymous?: SortOrder
@@ -12767,6 +12802,7 @@ export namespace Prisma {
   export type IssueAvgOrderByAggregateInput = {
     lat?: SortOrder
     lng?: SortOrder
+    embedding?: SortOrder
     upvotes?: SortOrder
     views?: SortOrder
   }
@@ -12816,6 +12852,7 @@ export namespace Prisma {
   export type IssueSumOrderByAggregateInput = {
     lat?: SortOrder
     lng?: SortOrder
+    embedding?: SortOrder
     upvotes?: SortOrder
     views?: SortOrder
   }
@@ -13255,6 +13292,10 @@ export namespace Prisma {
     deleteMany?: VoteScalarWhereInput | VoteScalarWhereInput[]
   }
 
+  export type IssueCreateembeddingInput = {
+    set: number[]
+  }
+
   export type UserCreateNestedOneWithoutIssuesInput = {
     create?: XOR<UserCreateWithoutIssuesInput, UserUncheckedCreateWithoutIssuesInput>
     connectOrCreate?: UserCreateOrConnectWithoutIssuesInput
@@ -13321,6 +13362,11 @@ export namespace Prisma {
     decrement?: number
     multiply?: number
     divide?: number
+  }
+
+  export type IssueUpdateembeddingInput = {
+    set?: number[]
+    push?: number | number[]
   }
 
   export type IntFieldUpdateOperationsInput = {
@@ -14027,6 +14073,7 @@ export namespace Prisma {
     lng?: number | null
     photo?: string | null
     resolvedPhoto?: string | null
+    embedding?: IssueCreateembeddingInput | number[]
     upvotes?: number
     views?: number
     isAnonymous?: boolean
@@ -14050,6 +14097,7 @@ export namespace Prisma {
     lng?: number | null
     photo?: string | null
     resolvedPhoto?: string | null
+    embedding?: IssueCreateembeddingInput | number[]
     upvotes?: number
     views?: number
     isAnonymous?: boolean
@@ -14215,6 +14263,7 @@ export namespace Prisma {
     lng?: FloatNullableFilter<"Issue"> | number | null
     photo?: StringNullableFilter<"Issue"> | string | null
     resolvedPhoto?: StringNullableFilter<"Issue"> | string | null
+    embedding?: FloatNullableListFilter<"Issue">
     upvotes?: IntFilter<"Issue"> | number
     views?: IntFilter<"Issue"> | number
     isAnonymous?: BoolFilter<"Issue"> | boolean
@@ -14514,6 +14563,7 @@ export namespace Prisma {
     lng?: number | null
     photo?: string | null
     resolvedPhoto?: string | null
+    embedding?: IssueCreateembeddingInput | number[]
     upvotes?: number
     views?: number
     isAnonymous?: boolean
@@ -14537,6 +14587,7 @@ export namespace Prisma {
     lng?: number | null
     photo?: string | null
     resolvedPhoto?: string | null
+    embedding?: IssueCreateembeddingInput | number[]
     upvotes?: number
     views?: number
     isAnonymous?: boolean
@@ -14615,6 +14666,7 @@ export namespace Prisma {
     lng?: NullableFloatFieldUpdateOperationsInput | number | null
     photo?: NullableStringFieldUpdateOperationsInput | string | null
     resolvedPhoto?: NullableStringFieldUpdateOperationsInput | string | null
+    embedding?: IssueUpdateembeddingInput | number[]
     upvotes?: IntFieldUpdateOperationsInput | number
     views?: IntFieldUpdateOperationsInput | number
     isAnonymous?: BoolFieldUpdateOperationsInput | boolean
@@ -14638,6 +14690,7 @@ export namespace Prisma {
     lng?: NullableFloatFieldUpdateOperationsInput | number | null
     photo?: NullableStringFieldUpdateOperationsInput | string | null
     resolvedPhoto?: NullableStringFieldUpdateOperationsInput | string | null
+    embedding?: IssueUpdateembeddingInput | number[]
     upvotes?: IntFieldUpdateOperationsInput | number
     views?: IntFieldUpdateOperationsInput | number
     isAnonymous?: BoolFieldUpdateOperationsInput | boolean
@@ -14706,6 +14759,7 @@ export namespace Prisma {
     lng?: number | null
     photo?: string | null
     resolvedPhoto?: string | null
+    embedding?: IssueCreateembeddingInput | number[]
     upvotes?: number
     views?: number
     isAnonymous?: boolean
@@ -14729,6 +14783,7 @@ export namespace Prisma {
     lng?: number | null
     photo?: string | null
     resolvedPhoto?: string | null
+    embedding?: IssueCreateembeddingInput | number[]
     upvotes?: number
     views?: number
     isAnonymous?: boolean
@@ -14807,6 +14862,7 @@ export namespace Prisma {
     lng?: NullableFloatFieldUpdateOperationsInput | number | null
     photo?: NullableStringFieldUpdateOperationsInput | string | null
     resolvedPhoto?: NullableStringFieldUpdateOperationsInput | string | null
+    embedding?: IssueUpdateembeddingInput | number[]
     upvotes?: IntFieldUpdateOperationsInput | number
     views?: IntFieldUpdateOperationsInput | number
     isAnonymous?: BoolFieldUpdateOperationsInput | boolean
@@ -14830,6 +14886,7 @@ export namespace Prisma {
     lng?: NullableFloatFieldUpdateOperationsInput | number | null
     photo?: NullableStringFieldUpdateOperationsInput | string | null
     resolvedPhoto?: NullableStringFieldUpdateOperationsInput | string | null
+    embedding?: IssueUpdateembeddingInput | number[]
     upvotes?: IntFieldUpdateOperationsInput | number
     views?: IntFieldUpdateOperationsInput | number
     isAnonymous?: BoolFieldUpdateOperationsInput | boolean
@@ -14898,6 +14955,7 @@ export namespace Prisma {
     lng?: number | null
     photo?: string | null
     resolvedPhoto?: string | null
+    embedding?: IssueCreateembeddingInput | number[]
     upvotes?: number
     views?: number
     isAnonymous?: boolean
@@ -14921,6 +14979,7 @@ export namespace Prisma {
     lng?: number | null
     photo?: string | null
     resolvedPhoto?: string | null
+    embedding?: IssueCreateembeddingInput | number[]
     upvotes?: number
     views?: number
     isAnonymous?: boolean
@@ -14960,6 +15019,7 @@ export namespace Prisma {
     lng?: NullableFloatFieldUpdateOperationsInput | number | null
     photo?: NullableStringFieldUpdateOperationsInput | string | null
     resolvedPhoto?: NullableStringFieldUpdateOperationsInput | string | null
+    embedding?: IssueUpdateembeddingInput | number[]
     upvotes?: IntFieldUpdateOperationsInput | number
     views?: IntFieldUpdateOperationsInput | number
     isAnonymous?: BoolFieldUpdateOperationsInput | boolean
@@ -14983,6 +15043,7 @@ export namespace Prisma {
     lng?: NullableFloatFieldUpdateOperationsInput | number | null
     photo?: NullableStringFieldUpdateOperationsInput | string | null
     resolvedPhoto?: NullableStringFieldUpdateOperationsInput | string | null
+    embedding?: IssueUpdateembeddingInput | number[]
     upvotes?: IntFieldUpdateOperationsInput | number
     views?: IntFieldUpdateOperationsInput | number
     isAnonymous?: BoolFieldUpdateOperationsInput | boolean
@@ -15027,6 +15088,7 @@ export namespace Prisma {
     lng?: number | null
     photo?: string | null
     resolvedPhoto?: string | null
+    embedding?: IssueCreateembeddingInput | number[]
     upvotes?: number
     views?: number
     isAnonymous?: boolean
@@ -15126,6 +15188,7 @@ export namespace Prisma {
     lng?: NullableFloatFieldUpdateOperationsInput | number | null
     photo?: NullableStringFieldUpdateOperationsInput | string | null
     resolvedPhoto?: NullableStringFieldUpdateOperationsInput | string | null
+    embedding?: IssueUpdateembeddingInput | number[]
     upvotes?: IntFieldUpdateOperationsInput | number
     views?: IntFieldUpdateOperationsInput | number
     isAnonymous?: BoolFieldUpdateOperationsInput | boolean
@@ -15149,6 +15212,7 @@ export namespace Prisma {
     lng?: NullableFloatFieldUpdateOperationsInput | number | null
     photo?: NullableStringFieldUpdateOperationsInput | string | null
     resolvedPhoto?: NullableStringFieldUpdateOperationsInput | string | null
+    embedding?: IssueUpdateembeddingInput | number[]
     upvotes?: IntFieldUpdateOperationsInput | number
     views?: IntFieldUpdateOperationsInput | number
     isAnonymous?: BoolFieldUpdateOperationsInput | boolean
@@ -15172,6 +15236,7 @@ export namespace Prisma {
     lng?: NullableFloatFieldUpdateOperationsInput | number | null
     photo?: NullableStringFieldUpdateOperationsInput | string | null
     resolvedPhoto?: NullableStringFieldUpdateOperationsInput | string | null
+    embedding?: IssueUpdateembeddingInput | number[]
     upvotes?: IntFieldUpdateOperationsInput | number
     views?: IntFieldUpdateOperationsInput | number
     isAnonymous?: BoolFieldUpdateOperationsInput | boolean

@@ -8,6 +8,7 @@ import { StatusBadge, PriorityBadge } from "~/components/ui";
 import dynamic from "next/dynamic";
 
 const LeafletMap = dynamic(() => import("~/components/leaflet-map"), { ssr: false, loading: () => <div style={{ width: "100%", height: "100%", background: "#e8e0d0" }} /> });
+const TriageTrace = dynamic(() => import("~/components/triage-trace"), { ssr: false });
 import { useIssues } from "~/lib/api";
 
 const AREAS = ["All Lahore", "Gulberg", "DHA", "Cantt", "Old Lahore", "Iqbal Town", "Johar Town"];
@@ -641,10 +642,7 @@ function DetailDrawer({ issue, loading, onClose, onAction, isMobile }: { issue: 
           </Link>
         </div>
 
-        <div style={{ marginTop: 14, fontFamily: T.fontMono, fontSize: 9, color: T.ink[500], letterSpacing: "0.12em" }}>AI BRIEF</div>
-        <div style={{ marginTop: 6, padding: 10, borderRadius: 10, background: T.blue[50], border: `1px solid ${T.blue[100]}`, fontSize: 12, color: T.blue[700], lineHeight: 1.4 }}>
-          <b>✱ Category:</b> {MSGetCat(issue.categoryLower).label} · Priority: {issue.priorityLower} · Area: {issue.area ?? "Unknown"}
-        </div>
+        <TriageTrace issueId={issue.id} />
       </div>
     </div>
     </>

@@ -176,6 +176,7 @@ exports.Prisma.IssueScalarFieldEnum = {
   lng: 'lng',
   photo: 'photo',
   resolvedPhoto: 'resolvedPhoto',
+  embedding: 'embedding',
   upvotes: 'upvotes',
   views: 'views',
   isAnonymous: 'isAnonymous',
