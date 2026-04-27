@@ -48,7 +48,7 @@ export default function DetailPage() {
   // Fetch similar/duplicate issues once issue is loaded
   useEffect(() => {
     if (!issue) return;
-    fetch(`/api/issues/similar?category=${issue.category}&area=${encodeURIComponent(issue.area)}&excludeId=${issue.id}`)
+    fetch(`/api/issues/similar?category=${issue.category}&area=${encodeURIComponent(issue.area ?? "")}&excludeId=${issue.id}${issue.lat != null && issue.lng != null ? `&lat=${issue.lat}&lng=${issue.lng}` : ""}`)
       .then((r) => r.json())
       .then(setSimilarIssues)
       .catch(() => {});

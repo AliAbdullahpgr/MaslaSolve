@@ -4,7 +4,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? "");
 
 export async function analyzeImage(imageBase64: string) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `Analyze this civic issue image. Respond ONLY with a JSON object in this exact format:
 {
@@ -52,7 +52,7 @@ Low if: cosmetic or minor`;
 
 export async function rewriteDescription(description: string) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const prompt = `Rewrite this civic issue description to be clear, concise, and actionable for city officials. Keep it under 100 words. Maintain the original language if it's not English.
 

@@ -24,12 +24,20 @@ export default function HomePage() {
     filter === "urgent" ? { priority: "URGENT" } : undefined
   );
 
-  const [minHold, setMinHold] = useState(true);
+  const [minHold, setMinHold] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const last = Number(localStorage.getItem("ms_loaded_at") ?? 0);
+    return Date.now() - last > 60_000;
+  });
   useEffect(() => {
-    const id = setTimeout(() => setMinHold(false), 3000);
+    if (!minHold) return;
+    const id = setTimeout(() => {
+      localStorage.setItem("ms_loaded_at", String(Date.now()));
+      setMinHold(false);
+    }, 3000);
     return () => clearTimeout(id);
-  }, []);
-  const showLoader = loading || minHold;
+  }, [minHold]);
+  const showLoader = minHold;
 
   const allMapped = useMemo(() => issues.map((issue: any) => ({
     ...issue,
@@ -99,20 +107,40 @@ export default function HomePage() {
               </span>
             </div>
           </div>
-          <div
-            style={{
-              width: 38, height: 38, borderRadius: 99,
-              background: MS_TOKENS.ink[900], color: "#fff",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: MS_TOKENS.fontDisplay, fontWeight: 600, fontSize: 14,
-              cursor: "pointer",
-            }}
-            onClick={() => {
-              if (session) window.location.href = "/api/auth/signout";
-              else window.location.href = "/auth/signin";
-            }}
-          >
-            {session?.user?.name?.split(" ").map((n: string) => n[0]).join("") ?? "?"}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {(session?.user as any)?.role === "ADMIN" && (
+              <Link
+                href="/dashboard"
+                style={{
+                  textDecoration: "none",
+                  padding: "7px 12px",
+                  borderRadius: 99,
+                  background: MS_TOKENS.blue[600],
+                  color: "#fff",
+                  fontFamily: MS_TOKENS.fontDisplay,
+                  fontWeight: 600,
+                  fontSize: 12,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Dashboard
+              </Link>
+            )}
+            <div
+              style={{
+                width: 38, height: 38, borderRadius: 99,
+                background: MS_TOKENS.ink[900], color: "#fff",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontFamily: MS_TOKENS.fontDisplay, fontWeight: 600, fontSize: 14,
+                cursor: "pointer",
+              }}
+              onClick={() => {
+                if (session) window.location.href = "/api/auth/signout";
+                else window.location.href = "/auth/signin";
+              }}
+            >
+              {session?.user?.name?.split(" ").map((n: string) => n[0]).join("") ?? "?"}
+            </div>
           </div>
         </div>
 

@@ -36,6 +36,16 @@ export default function DashboardPage() {
   const [priorityFilter, setPriorityFilter] = useState("All");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"inbox" | "map" | "analytics" | "crews">("inbox");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  React.useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 900);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
   const [localIssues, setLocalIssues] = useState<any[]>([]);
   React.useEffect(() => { setLocalIssues(issues); }, [issues]);
@@ -61,7 +71,7 @@ export default function DashboardPage() {
       });
   }, [localIssues, areaFilter, categoryFilter, statusFilter, priorityFilter, search]);
 
-  const selectedIssue = displayedIssues.find((i) => i.id === selectedId) ?? displayedIssues[0] ?? null;
+  const selectedIssue = selectedId ? displayedIssues.find((i) => i.id === selectedId) ?? null : null;
 
   const openCount = localIssues.filter((i: any) => i.status === "REPORTED").length;
   const inProgressCount = localIssues.filter((i: any) => i.status === "IN_PROGRESS").length;
@@ -78,9 +88,38 @@ export default function DashboardPage() {
   };
 
   return (
-    <div style={{ width: "100%", height: "100vh", overflow: "hidden", background: T.ink[50], fontFamily: T.fontUI, color: T.ink[900], display: "grid", gridTemplateColumns: "220px 1fr", position: "relative" }}>
+    <div style={{ width: "100%", height: "100vh", overflow: "hidden", background: T.ink[50], fontFamily: T.fontUI, color: T.ink[900], display: isMobile ? "flex" : "grid", flexDirection: isMobile ? "column" : undefined, gridTemplateColumns: isMobile ? undefined : "220px 1fr", position: "relative" }}>
+      {/* Mobile top bar */}
+      {isMobile && (
+        <div style={{ background: T.ink[900], color: "#fff", padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+          <button onClick={() => setSidebarOpen(true)} style={{ all: "unset", cursor: "pointer", width: 36, height: 36, borderRadius: 8, background: "rgba(255,255,255,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+          <div style={{ width: 28, height: 28, borderRadius: 7, background: `linear-gradient(135deg, ${T.blue[500]}, #6E48F0)`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: T.fontDisplay, fontWeight: 700, fontSize: 13 }}>M</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: T.fontDisplay, fontSize: 14, fontWeight: 600 }}>MaslaSolve</div>
+            <div style={{ fontFamily: T.fontMono, fontSize: 8, opacity: 0.55, letterSpacing: "0.1em" }}>LDA · ADMIN</div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile backdrop */}
+      {isMobile && sidebarOpen && (
+        <div onClick={() => setSidebarOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 1500 }} />
+      )}
+
       {/* Sidebar */}
-      <aside style={{ background: T.ink[900], color: "#fff", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 4, overflow: "auto" }}>
+      <aside style={{
+        background: T.ink[900], color: "#fff", padding: "20px 16px", display: "flex", flexDirection: "column", gap: 4, overflow: "auto",
+        ...(isMobile ? {
+          position: "fixed", top: 0, left: 0, bottom: 0, width: 260, zIndex: 1600,
+          transform: sidebarOpen ? "translateX(0)" : "translateX(-100%)",
+          transition: "transform 0.25s ease",
+          boxShadow: sidebarOpen ? "0 0 30px rgba(0,0,0,0.4)" : "none",
+        } : {}),
+      }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
           <div style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${T.blue[500]}, #6E48F0)`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: T.fontDisplay, fontWeight: 700 }}>M</div>
           <div>
@@ -89,27 +128,25 @@ export default function DashboardPage() {
           </div>
         </div>
         <div style={{ fontFamily: T.fontMono, fontSize: 9, opacity: 0.45, letterSpacing: "0.14em", padding: "8px 8px 4px" }}>OPERATIONS</div>
-        {[
-          { l: "Inbox", n: openCount, active: true, i: "◆" },
-          { l: "Map view", i: "⌘", href: "/" },
-          { l: "Analytics", i: "▤" },
-          { l: "Crews", i: "⊞" },
-        ].map((item) => (
-          item.href ? (
-            <Link key={item.l} href={item.href}>
-              <div style={{ padding: "9px 10px", borderRadius: 8, fontSize: 13, fontWeight: 500, background: "transparent", color: "rgba(255,255,255,0.65)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}>
-                <span style={{ width: 14, opacity: 0.7 }}>{item.i}</span>
-                <span style={{ flex: 1 }}>{item.l}</span>
-              </div>
-            </Link>
-          ) : (
-            <div key={item.l} style={{ padding: "9px 10px", borderRadius: 8, fontSize: 13, fontWeight: 500, background: item.active ? "rgba(255,255,255,0.1)" : "transparent", color: item.active ? "#fff" : "rgba(255,255,255,0.65)", display: "flex", alignItems: "center", gap: 10 }}>
+        {([
+          { l: "Inbox", n: openCount, k: "inbox", i: "◆" },
+          { l: "Map view", k: "map", i: "⌘" },
+          { l: "Analytics", k: "analytics", i: "▤" },
+          { l: "Crews", k: "crews", i: "⊞" },
+        ] as const).map((item) => {
+          const active = activeTab === item.k;
+          return (
+            <div
+              key={item.l}
+              onClick={() => { setActiveTab(item.k); setSidebarOpen(false); }}
+              style={{ padding: "9px 10px", borderRadius: 8, fontSize: 13, fontWeight: 500, background: active ? "rgba(255,255,255,0.1)" : "transparent", color: active ? "#fff" : "rgba(255,255,255,0.65)", display: "flex", alignItems: "center", gap: 10, cursor: "pointer" }}
+            >
               <span style={{ width: 14, opacity: 0.7 }}>{item.i}</span>
               <span style={{ flex: 1 }}>{item.l}</span>
-              {item.n > 0 && <span style={{ fontSize: 10, fontFamily: T.fontMono, padding: "1px 5px", background: T.urgent, borderRadius: 4 }}>{item.n}</span>}
+              {"n" in item && item.n != null && item.n > 0 && <span style={{ fontSize: 10, fontFamily: T.fontMono, padding: "1px 5px", background: T.urgent, borderRadius: 4 }}>{item.n}</span>}
             </div>
-          )
-        ))}
+          );
+        })}
         <div style={{ fontFamily: T.fontMono, fontSize: 9, opacity: 0.45, letterSpacing: "0.14em", padding: "20px 8px 4px" }}>AREAS</div>
         {AREAS.slice(1).map((a) => (
           <div
@@ -133,17 +170,132 @@ export default function DashboardPage() {
       </aside>
 
       {/* Main */}
-      <main style={{ overflow: "auto", padding: "20px 28px 32px" }}>
+      {activeTab !== "inbox" ? (
+        <main style={{
+          background: "#fff",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          position: "relative",
+          overflow: "hidden",
+        }}>
+          <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.5 }}>
+            <defs>
+              <pattern id="csDotGrid" width="22" height="22" patternUnits="userSpaceOnUse">
+                <circle cx="1" cy="1" r="1" fill={T.ink[200]} />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#csDotGrid)" />
+          </svg>
+
+          <div style={{
+            position: "relative",
+            zIndex: 1,
+            textAlign: "center",
+            maxWidth: 480,
+            padding: "0 24px",
+          }}>
+            <div style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "6px 12px",
+              borderRadius: 99,
+              background: T.blue[50],
+              border: `1px solid ${T.blue[100]}`,
+              color: T.blue[700],
+              fontFamily: T.fontMono,
+              fontSize: 10,
+              letterSpacing: "0.18em",
+              marginBottom: 24,
+            }}>
+              <span style={{
+                width: 6,
+                height: 6,
+                borderRadius: 99,
+                background: T.blue[600],
+                boxShadow: `0 0 0 4px ${T.blue[100]}`,
+                animation: "csPulse 1.6s ease-in-out infinite",
+              }} />
+              IN DEVELOPMENT
+            </div>
+
+            <h1 style={{
+              margin: 0,
+              fontFamily: T.fontDisplay,
+              fontSize: 56,
+              fontWeight: 700,
+              letterSpacing: "-0.04em",
+              lineHeight: 1,
+              color: T.ink[900],
+            }}>
+              Coming <span style={{ color: T.blue[600], fontStyle: "italic" }}>soon</span>
+            </h1>
+
+            <p style={{
+              marginTop: 16,
+              fontSize: 15,
+              lineHeight: 1.55,
+              color: T.ink[500],
+            }}>
+              {activeTab === "map" && "A live operational map view of every open issue across Lahore — with crew positions, route overlays, and SLA timers."}
+              {activeTab === "analytics" && "Deeper analytics — resolution time trends, area performance breakdowns, category drill-downs, and exportable reports."}
+              {activeTab === "crews" && "Crew management — assign teams, track active dispatches, log on-site reports, and balance load across districts."}
+            </p>
+
+            <div style={{
+              display: "flex",
+              gap: 8,
+              justifyContent: "center",
+              marginTop: 28,
+            }}>
+              {[0, 1, 2].map(i => (
+                <div key={i} style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: 99,
+                  background: T.ink[200],
+                  animation: `csDot 1.4s ease-in-out ${i * 0.2}s infinite`,
+                }} />
+              ))}
+            </div>
+
+            <button
+              onClick={() => setActiveTab("inbox")}
+              style={{
+                all: "unset",
+                cursor: "pointer",
+                marginTop: 32,
+                padding: "10px 18px",
+                borderRadius: 10,
+                background: T.ink[900],
+                color: "#fff",
+                fontSize: 13,
+                fontWeight: 600,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              ← Back to Inbox
+            </button>
+          </div>
+
+          <style>{`
+            @keyframes csPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+            @keyframes csDot { 0%, 100% { transform: scale(1); opacity: 0.4; } 50% { transform: scale(1.5); opacity: 1; background: ${T.blue[600]}; } }
+          `}</style>
+        </main>
+      ) : (
+      <main style={{ overflow: "auto", padding: isMobile ? "16px 14px 24px" : `20px ${selectedIssue ? 356 : 28}px 32px 28px`, transition: "padding 0.2s" }}>
         {/* Top bar */}
-        <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 18 }}>
+        <header style={{ display: "flex", alignItems: isMobile ? "stretch" : "center", justifyContent: "space-between", marginBottom: 18, flexDirection: isMobile ? "column" : "row", gap: isMobile ? 12 : 0 }}>
           <div>
             <div style={{ fontFamily: T.fontMono, fontSize: 10, color: T.ink[500], letterSpacing: "0.14em" }}>OPERATIONS / INBOX</div>
-            <h1 style={{ margin: "2px 0 0", fontFamily: T.fontDisplay, fontSize: 28, fontWeight: 600, letterSpacing: "-0.02em" }}>
+            <h1 style={{ margin: "2px 0 0", fontFamily: T.fontDisplay, fontSize: isMobile ? 22 : 28, fontWeight: 600, letterSpacing: "-0.02em" }}>
               Issues across Lahore <span style={{ color: T.ink[400], fontWeight: 400 }}>· today</span>
             </h1>
           </div>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <div style={{ padding: "8px 14px", height: 38, borderRadius: 10, background: "#fff", border: `1px solid ${T.ink[200]}`, display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: T.ink[500], width: 220, boxSizing: "border-box" }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", width: isMobile ? "100%" : "auto" }}>
+            <div style={{ padding: "8px 14px", height: 38, borderRadius: 10, background: "#fff", border: `1px solid ${T.ink[200]}`, display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: T.ink[500], width: isMobile ? "100%" : 220, boxSizing: "border-box" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" strokeLinecap="round" />
               </svg>
@@ -164,7 +316,7 @@ export default function DashboardPage() {
         </header>
 
         {/* KPI strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: 10, marginBottom: 16 }}>
           <KPI label="Open issues" value={String(openCount)} delta={`${openCount} pending`} accent={T.urgent} />
           <KPI label="In progress" value={String(inProgressCount)} delta="active crews" accent={T.progress} />
           <KPI label="Resolved" value={String(resolvedCount)} delta={`${localIssues.length > 0 ? Math.round((resolvedCount / localIssues.length) * 100) : 0}% rate`} deltaPos accent={T.resolved} />
@@ -197,12 +349,14 @@ export default function DashboardPage() {
         </div>
 
         {/* Main grid: list + map */}
-        <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16, marginBottom: 20 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1.4fr 1fr", gap: 16, marginBottom: 20 }}>
           {/* Issue list */}
           <div style={{ background: "#fff", borderRadius: 14, border: `1px solid ${T.ink[200]}`, overflow: "hidden" }}>
-            <div style={{ display: "grid", gridTemplateColumns: "50px 1fr 100px 100px 80px 60px", gap: 10, padding: "10px 14px", borderBottom: `1px solid ${T.ink[100]}`, fontFamily: T.fontMono, fontSize: 9, color: T.ink[500], letterSpacing: "0.1em" }}>
-              <span>ID</span><span>ISSUE</span><span>AREA</span><span>STATUS</span><span>PRIORITY</span><span>VOTES</span>
-            </div>
+            {!isMobile && (
+              <div style={{ display: "grid", gridTemplateColumns: "50px 1fr 100px 100px 80px 60px", gap: 10, padding: "10px 14px", borderBottom: `1px solid ${T.ink[100]}`, fontFamily: T.fontMono, fontSize: 9, color: T.ink[500], letterSpacing: "0.1em" }}>
+                <span>ID</span><span>ISSUE</span><span>AREA</span><span>STATUS</span><span>PRIORITY</span><span>VOTES</span>
+              </div>
+            )}
             <div style={{ maxHeight: 420, overflow: "auto" }}>
               {loading ? (
                 <div style={{ padding: 24, textAlign: "center", color: T.ink[400], fontSize: 13 }}>Loading…</div>
@@ -210,7 +364,7 @@ export default function DashboardPage() {
                 <div style={{ padding: 24, textAlign: "center", color: T.ink[400], fontSize: 13 }}>No issues match filters</div>
               ) : (
                 displayedIssues.map((i) => (
-                  <DashRow key={i.id} issue={i} selected={selectedId === i.id} onClick={() => setSelectedId(i.id)} />
+                  <DashRow key={i.id} issue={i} selected={selectedId === i.id} onClick={() => setSelectedId(i.id)} isMobile={isMobile} />
                 ))
               )}
             </div>
@@ -248,7 +402,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Analytics row */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
           <Card eyebrow="Analytics" title="Most affected areas">
             {AREAS.slice(1).map((area) => {
               const count = localIssues.filter((i: any) => i.area === area).length;
@@ -299,14 +453,16 @@ export default function DashboardPage() {
           </Card>
         </div>
       </main>
+      )}
 
       {/* Detail drawer */}
-      {selectedIssue && (
+      {activeTab === "inbox" && selectedIssue && (
         <DetailDrawer
           issue={selectedIssue}
           loading={actionLoading}
           onClose={() => setSelectedId(null)}
           onAction={(status) => doAction(selectedIssue.id, { status })}
+          isMobile={isMobile}
         />
       )}
     </div>
@@ -326,10 +482,39 @@ function KPI({ label, value, delta, deltaPos, accent }: { label: string; value: 
   );
 }
 
-function DashRow({ issue, selected, onClick }: { issue: any; selected: boolean; onClick: () => void }) {
+function DashRow({ issue, selected, onClick, isMobile }: { issue: any; selected: boolean; onClick: () => void; isMobile?: boolean }) {
   const T = MS_TOKENS;
   const cat = MSGetCat(issue.categoryLower);
   const Icon = getIcon(cat.icon);
+
+  if (isMobile) {
+    return (
+      <div
+        onClick={onClick}
+        style={{
+          padding: "12px 14px", borderBottom: `1px solid ${T.ink[100]}`,
+          cursor: "pointer", background: selected ? T.blue[50] : "transparent",
+          display: "flex", flexDirection: "column", gap: 6,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 6, background: cat.hue + "18", color: cat.hue, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <Icon s={14} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: T.ink[900], overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{issue.title}</div>
+            <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.ink[500], marginTop: 1 }}>…{issue.id.slice(-4)} · {issue.area}</div>
+          </div>
+          <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.ink[700], flexShrink: 0 }}>▲ {issue.upvotes}</span>
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <StatusBadge status={issue.statusLower} size="sm" />
+          <PriorityBadge priority={issue.priorityLower} size="sm" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       onClick={onClick}
@@ -368,10 +553,23 @@ function Card({ eyebrow, title, children }: { eyebrow: string; title: string; ch
   );
 }
 
-function DetailDrawer({ issue, loading, onClose, onAction }: { issue: any; loading: boolean; onClose: () => void; onAction: (status: string) => void }) {
+function DetailDrawer({ issue, loading, onClose, onAction, isMobile }: { issue: any; loading: boolean; onClose: () => void; onAction: (status: string) => void; isMobile?: boolean }) {
   const T = MS_TOKENS;
   return (
-    <div style={{ position: "absolute", top: 12, right: 12, bottom: 12, width: 320, background: "#fff", borderRadius: 14, border: `1px solid ${T.ink[200]}`, boxShadow: T.shadow.lg, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+    <>
+    {isMobile && <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999 }} />}
+    <div style={{
+      position: "fixed",
+      background: "#fff", border: `1px solid ${T.ink[200]}`, boxShadow: T.shadow.lg,
+      overflow: "hidden", display: "flex", flexDirection: "column", zIndex: 1000,
+      ...(isMobile ? {
+        left: 0, right: 0, bottom: 0, top: 80,
+        borderRadius: "18px 18px 0 0",
+      } : {
+        top: 12, right: 12, bottom: 12, width: 320,
+        borderRadius: 14,
+      }),
+    }}>
       <div style={{ padding: 12, borderBottom: `1px solid ${T.ink[100]}`, display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.ink[600], background: T.ink[100], padding: "3px 6px", borderRadius: 4 }}>
           …{issue.id.slice(-4)}
@@ -449,5 +647,6 @@ function DetailDrawer({ issue, loading, onClose, onAction }: { issue: any; loadi
         </div>
       </div>
     </div>
+    </>
   );
 }

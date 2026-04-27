@@ -121,7 +121,8 @@ export default function ReportPage() {
 
   const fetchSimilar = useCallback((category: string) => {
     const area = areaFromLatLng(lat, lng);
-    fetch(`/api/issues/similar?category=${category}&area=${encodeURIComponent(area)}`)
+    const params = new URLSearchParams({ category, area, lat: String(lat), lng: String(lng) });
+    fetch(`/api/issues/similar?${params}`)
       .then((r) => r.json())
       .then(setSimilarIssues)
       .catch(() => {});

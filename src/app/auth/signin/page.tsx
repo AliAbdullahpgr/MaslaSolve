@@ -28,8 +28,16 @@ export default function SignInPage() {
       setError("Invalid email or password");
       setLoading(false);
     } else {
-      router.push("/");
-      router.refresh();
+      try {
+        const sessionRes = await fetch("/api/auth/session");
+        const session = await sessionRes.json();
+        const dest = session?.user?.role === "ADMIN" ? "/dashboard" : "/";
+        router.push(dest);
+        router.refresh();
+      } catch {
+        router.push("/");
+        router.refresh();
+      }
     }
   };
 
