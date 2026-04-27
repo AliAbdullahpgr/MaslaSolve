@@ -344,7 +344,7 @@ function BottomSheetCard({ issue }: { issue: any }) {
     <Link href={`/issue/${issue.id}`}>
       <div style={{ position: "absolute", left: 12, right: 12, bottom: 70, background: "#fff", borderRadius: 14, padding: 9, display: "flex", gap: 10, alignItems: "center", boxShadow: T.shadow.lg, cursor: "pointer", border: `1px solid ${T.ink[100]}` }}>
         <div style={{ width: 3, alignSelf: "stretch", borderRadius: 4, background: T.urgent }} />
-        <div style={{ width: 44, height: 44, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: `url(${issue.photo}) center/cover, ${T.ink[100]}` }} />
+        <div style={{ width: 44, height: 44, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: `url(${(String(issue.status).toLowerCase() === "resolved" && issue.resolvedPhoto) || issue.photo}) center/cover, ${T.ink[100]}` }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", gap: 5, marginBottom: 2 }}>
             <PriorityBadge priority={issue.priority} size="sm" />
@@ -370,7 +370,7 @@ function IssueCard({ issue, rank }: { issue: any; rank: number }) {
       <div style={{ background: "#fff", borderRadius: 18, marginBottom: 12, border: `1px solid ${T.ink[100]}`, overflow: "hidden", boxShadow: T.shadow.sm, cursor: "pointer" }}>
         <div style={{ display: "flex", gap: 12, padding: 12 }}>
           <div style={{ position: "relative", width: 84, height: 84, flexShrink: 0 }}>
-            <div style={{ width: "100%", height: "100%", borderRadius: 12, background: `url(${issue.photo}) center/cover, ${T.ink[100]}` }} />
+            <div style={{ width: "100%", height: "100%", borderRadius: 12, background: `url(${(String(issue.status).toLowerCase() === "resolved" && issue.resolvedPhoto) || issue.photo}) center/cover, ${T.ink[100]}` }} />
             <div style={{ position: "absolute", top: 6, left: 6, width: 22, height: 22, borderRadius: 6, background: "rgba(11,26,36,0.78)", color: "#fff", fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
               #{rank}
             </div>

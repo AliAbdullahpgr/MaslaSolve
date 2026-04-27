@@ -100,13 +100,22 @@ export default function DetailPage() {
   const CatIcon = getIcon(cat.icon);
   const isResolved = issue.status === "RESOLVED";
 
+  const resolvedAt = isResolved ? new Date(issue.updatedAt).toLocaleString("en-PK", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "ETA pending";
   const timeline = issue.timeline?.length > 0
-    ? issue.timeline.map((t: any) => ({ t: t.label, at: t.note || new Date(t.timestamp).toLocaleString("en-PK", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }), done: t.done, note: t.note }))
+    ? issue.timeline.map((t: any) => {
+        const isResolvedStep = t.label?.toLowerCase() === "resolved";
+        return {
+          t: t.label,
+          at: isResolved && isResolvedStep && !t.done ? resolvedAt : (t.note || new Date(t.timestamp).toLocaleString("en-PK", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })),
+          done: isResolved ? true : t.done,
+          note: t.note,
+        };
+      })
     : [
         { t: "Reported", at: new Date(issue.createdAt).toLocaleString("en-PK", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }), done: true },
-        { t: "Verified", at: "—", done: false },
-        { t: "In Progress", at: "—", done: issue.status === "IN_PROGRESS" || issue.status === "RESOLVED" },
-        { t: "Resolved", at: isResolved ? new Date(issue.updatedAt).toLocaleString("en-PK", { day: "numeric", month: "short" }) : "ETA pending", done: isResolved },
+        { t: "Verified", at: "—", done: isResolved || issue.status === "IN_PROGRESS" },
+        { t: "In Progress", at: "—", done: isResolved || issue.status === "IN_PROGRESS" },
+        { t: "Resolved", at: isResolved ? resolvedAt : "ETA pending", done: isResolved },
       ];
 
   const reporterName = issue.isAnonymous ? "Anonymous" : (issue.reporter?.name ?? "Anonymous");
@@ -115,7 +124,7 @@ export default function DetailPage() {
   return (
     <div className="mx-auto h-[100dvh] max-w-md overflow-auto" style={{ background: T.paper, fontFamily: T.fontUI, color: T.ink[900], position: "relative" }}>
       {/* Hero image */}
-      <div style={{ position: "relative", height: 280, overflow: "hidden", background: `url(${issue.photo}) center/cover, ${T.ink[300]}` }}>
+      <div style={{ position: "relative", height: 280, overflow: "hidden", background: `url(${(isResolved && issue.resolvedPhoto) || issue.photo}) center/cover, ${T.ink[300]}` }}>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(11,26,36,0.5) 0%, transparent 30%, transparent 70%, rgba(11,26,36,0.6) 100%)" }} />
         <Link href="/">
           <button style={{ all: "unset", cursor: "pointer", position: "absolute", left: 14, top: 14, width: 38, height: 38, borderRadius: 99, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center" }}>

@@ -577,7 +577,7 @@ function DetailDrawer({ issue, loading, onClose, onAction, isMobile }: { issue: 
         <PriorityBadge priority={issue.priorityLower} size="sm" />
         <span style={{ marginLeft: "auto", cursor: "pointer", color: T.ink[500], fontSize: 18, lineHeight: 1 }} onClick={onClose}>✕</span>
       </div>
-      <div style={{ height: 130, background: `url(${issue.photo}) center/cover, ${T.ink[100]}`, position: "relative", flexShrink: 0 }}>
+      <div style={{ height: 130, background: `url(${(String(issue.statusLower ?? issue.status).toLowerCase() === "resolved" && issue.resolvedPhoto) || issue.photo}) center/cover, ${T.ink[100]}`, position: "relative", flexShrink: 0 }}>
         <div style={{ position: "absolute", left: 10, bottom: 10 }}>
           <StatusBadge status={issue.statusLower} size="sm" />
         </div>

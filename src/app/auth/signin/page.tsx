@@ -214,21 +214,53 @@ export default function SignInPage() {
           </Link>
         </div>
 
-        <div
-          style={{
-            marginTop: 16,
-            padding: "12px",
-            background: MS_TOKENS.ink[50],
-            borderRadius: 10,
-            fontSize: 12,
-            color: MS_TOKENS.ink[500],
-          }}
-        >
-          <b>Demo accounts:</b>
-          <br />
-          Citizen: ayesha@example.com / password
-          <br />
-          Admin: admin@maslasolve.pk / admin123
+        <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <button
+            type="button"
+            onClick={() => {
+              setEmail("ayesha@example.com");
+              setPassword("password");
+            }}
+            style={{
+              padding: "10px 12px",
+              background: MS_TOKENS.ink[50],
+              border: `1px solid ${MS_TOKENS.ink[200]}`,
+              borderRadius: 10,
+              fontSize: 12,
+              fontFamily: MS_TOKENS.fontUI,
+              color: MS_TOKENS.ink[700],
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+            <div style={{ fontWeight: 600, color: MS_TOKENS.ink[900], marginBottom: 2 }}>
+              Citizen
+            </div>
+            <div style={{ color: MS_TOKENS.ink[500] }}>Use demo account</div>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setEmail("admin@maslasolve.pk");
+              setPassword("admin123");
+            }}
+            style={{
+              padding: "10px 12px",
+              background: MS_TOKENS.ink[50],
+              border: `1px solid ${MS_TOKENS.ink[200]}`,
+              borderRadius: 10,
+              fontSize: 12,
+              fontFamily: MS_TOKENS.fontUI,
+              color: MS_TOKENS.ink[700],
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
+            <div style={{ fontWeight: 600, color: MS_TOKENS.ink[900], marginBottom: 2 }}>
+              Admin
+            </div>
+            <div style={{ color: MS_TOKENS.ink[500] }}>Use demo account</div>
+          </button>
         </div>
       </div>
     </div>

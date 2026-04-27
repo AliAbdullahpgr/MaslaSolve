@@ -86,6 +86,7 @@ export type Issue = {
   reporter: string;
   distance: string;
   photo: string;
+  photoBefore?: string;
   desc: string;
   timeline?: { t: string; at: string; done: boolean; note?: string }[];
 };
@@ -104,7 +105,7 @@ export const MSIssues: Issue[] = [
     reportedAt: "2026-04-22",
     reporter: "Ayesha K.",
     distance: "0.4 km",
-    photo: "https://images.unsplash.com/photo-1597007030739-6d2e7172ee6c?w=900&q=70",
+    photo: "https://j3iyjjcdsn.ufs.sh/f/d6eWO3XMcWqjLXNvNjbyt4NHIA2q76S13TkYrRxeWiKBcf8d",
     desc: "Massive pothole right at the Liberty roundabout exit toward MM Alam. Bikes have been crashing into it after dark.",
     timeline: [
       { t: "Reported", at: "22 Apr · 9:14 am", done: true },
@@ -126,7 +127,7 @@ export const MSIssues: Issue[] = [
     reportedAt: "2026-04-23",
     reporter: "Hassan A.",
     distance: "2.1 km",
-    photo: "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=900&q=70",
+    photo: "https://j3iyjjcdsn.ufs.sh/f/d6eWO3XMcWqj4q7etzqhX6oWuLeOA4TsBvrzgDJkx0aRcYIH",
     desc: "Entire stretch from Y Block market to commercial area is pitch black. Women avoid the route after Maghrib.",
     timeline: [
       { t: "Reported", at: "23 Apr · 8:41 pm", done: true },
@@ -164,7 +165,7 @@ export const MSIssues: Issue[] = [
     reportedAt: "2026-04-21",
     reporter: "Sana M.",
     distance: "5.2 km",
-    photo: "https://images.unsplash.com/photo-1567113463300-102a7eb3cb26?w=900&q=70",
+    photo: "https://j3iyjjcdsn.ufs.sh/f/d6eWO3XMcWqj4TN7iMhX6oWuLeOA4TsBvrzgDJkx0aRcYIH2",
     desc: "Signal stuck on red for southbound traffic. Causing 30-min jams during evening rush.",
   },
   {
@@ -180,7 +181,7 @@ export const MSIssues: Issue[] = [
     reportedAt: "2026-04-22",
     reporter: "Rabia S.",
     distance: "6.0 km",
-    photo: "https://images.unsplash.com/photo-1558618047-3c8c76ca7d13?w=900&q=70",
+    photo: "https://j3iyjjcdsn.ufs.sh/f/d6eWO3XMcWqjKJCDv9y0mEBhjJMxYGH3rfS92sZVdc8IXD1i",
     desc: "Manhole overflowing, leaking into the lane. Has happened three monsoons in a row.",
   },
   {
@@ -197,7 +198,8 @@ export const MSIssues: Issue[] = [
     resolvedAt: "2026-04-20",
     reporter: "Usman T.",
     distance: "4.1 km",
-    photo: "https://images.unsplash.com/photo-1601933470928-c4adff8704e8?w=900&q=70",
+    photo: "https://j3iyjjcdsn.ufs.sh/f/d6eWO3XMcWqjdBTeZaXMcWqj20ewUs8typL3oxViaJEfmDZn",
+    photoBefore: "https://j3iyjjcdsn.ufs.sh/f/d6eWO3XMcWqjD4y3aNsXiIP3GqJgKYpv2komya5ZsejdNcVw",
     desc: "Repaired by City District Government within 5 days. Smooth tarmac restored.",
   },
 ];
