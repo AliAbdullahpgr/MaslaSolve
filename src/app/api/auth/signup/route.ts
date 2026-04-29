@@ -11,7 +11,7 @@ const signupSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
     const parsed = signupSchema.parse(body);
 
     const existing = await db.user.findUnique({

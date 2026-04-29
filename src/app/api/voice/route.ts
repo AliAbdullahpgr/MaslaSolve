@@ -6,7 +6,7 @@ export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {
-    const { audioBase64, mimeType } = await request.json();
+    const { audioBase64, mimeType } = (await request.json()) as { audioBase64?: string; mimeType?: string };
     if (!audioBase64) {
       return NextResponse.json({ error: "No audio provided" }, { status: 400 });
     }

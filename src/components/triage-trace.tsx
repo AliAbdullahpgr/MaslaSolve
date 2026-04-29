@@ -1,16 +1,29 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { MS_TOKENS } from "~/lib/tokens";
 
 const T = MS_TOKENS;
+
+type StepResult = Record<string, unknown>;
 
 type Step = {
   n: number;
   tool: string;
   status: "running" | "done";
   label: string;
-  result?: any;
+  result?: StepResult;
+};
+
+type SSEPayload = {
+  event: string;
+  n?: number;
+  tool?: string;
+  status?: "running" | "done";
+  label?: string;
+  result?: StepResult;
+  summary?: StepResult;
+  message?: string;
 };
 
 type Props = {
@@ -29,16 +42,15 @@ const TOOL_LABELS: Record<string, string> = {
 export default function TriageTrace({ issueId, autoStart }: Props) {
   const [running, setRunning] = useState(false);
   const [steps, setSteps] = useState<Step[]>([]);
-  const [summary, setSummary] = useState<any | null>(null);
+  const [summary, setSummary] = useState<StepResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const startedRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (autoStart && startedRef.current !== issueId) {
       startedRef.current = issueId;
-      run();
+      void run();
     }
-    // reset when issue changes
     setSteps([]);
     setSummary(null);
     setError(null);
@@ -64,36 +76,35 @@ export default function TriageTrace({ issueId, autoStart }: Props) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        // SSE frames are separated by blank lines
         const frames = buffer.split("\n\n");
         buffer = frames.pop() ?? "";
         for (const frame of frames) {
           const line = frame.split("\n").find((l) => l.startsWith("data:"));
           if (!line) continue;
           try {
-            const payload = JSON.parse(line.slice(5).trim());
+            const payload = JSON.parse(line.slice(5).trim()) as SSEPayload;
             handleEvent(payload);
           } catch {
             /* ignore parse */
           }
         }
       }
-    } catch (e: any) {
-      setError(e?.message ?? "Triage failed");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Triage failed");
     } finally {
       setRunning(false);
     }
   }
 
-  function handleEvent(payload: any) {
+  function handleEvent(payload: SSEPayload) {
     if (payload.event === "step") {
       setSteps((prev) => {
         const i = prev.findIndex((s) => s.n === payload.n);
         const next: Step = {
-          n: payload.n,
-          tool: payload.tool,
-          status: payload.status,
-          label: payload.label,
+          n: payload.n!,
+          tool: payload.tool!,
+          status: payload.status!,
+          label: payload.label!,
           result: payload.result,
         };
         if (i >= 0) {
@@ -104,9 +115,9 @@ export default function TriageTrace({ issueId, autoStart }: Props) {
         return [...prev, next];
       });
     } else if (payload.event === "complete") {
-      setSummary(payload.summary);
+      setSummary(payload.summary ?? null);
     } else if (payload.event === "error") {
-      setError(payload.message);
+      setError(payload.message ?? "Unknown error");
     }
   }
 
@@ -141,7 +152,7 @@ export default function TriageTrace({ issueId, autoStart }: Props) {
         </div>
         {!running && (
           <button
-            onClick={run}
+            onClick={() => void run()}
             style={{
               all: "unset", cursor: "pointer",
               fontSize: 11, fontWeight: 600,
@@ -205,7 +216,7 @@ export default function TriageTrace({ issueId, autoStart }: Props) {
                 </div>
               </div>
             </div>
-            {s.status === "done" && s.result && <StepResult tool={s.tool} result={s.result} />}
+            {s.status === "done" && s.result && <StepResultView tool={s.tool} result={s.result} />}
           </div>
         ))}
       </div>
@@ -221,22 +232,22 @@ export default function TriageTrace({ issueId, autoStart }: Props) {
   );
 }
 
-function StepResult({ tool, result }: { tool: string; result: any }) {
+function StepResultView({ tool, result }: { tool: string; result: StepResult }) {
   if (tool === "validateImage") {
     const ok = result.valid && result.matchesCategory;
     return (
       <div style={{ fontSize: 11, color: ok ? T.ink[700] : "#B71C1C", lineHeight: 1.4, paddingLeft: 24 }}>
         <span style={{ fontWeight: 600 }}>{ok ? "Looks legit." : "Flagged."}</span>{" "}
-        {result.reason}
+        {typeof result.reason === "string" ? result.reason : ""}
       </div>
     );
   }
   if (tool === "findDuplicates") {
-    const dupes: any[] = result.duplicates ?? [];
+    const dupes = (result.duplicates ?? []) as StepResult[];
     if (!dupes.length) {
       return (
         <div style={{ fontSize: 11, color: T.ink[500], paddingLeft: 24 }}>
-          No close duplicates found in {result.totalNearby} nearby reports.
+          No close duplicates found in {String(result.totalNearby)} nearby reports.
         </div>
       );
     }
@@ -244,8 +255,8 @@ function StepResult({ tool, result }: { tool: string; result: any }) {
       <div style={{ paddingLeft: 24, display: "flex", flexDirection: "column", gap: 4 }}>
         {dupes.map((d) => (
           <a
-            key={d.id}
-            href={`/issue/${d.id}`}
+            key={String(d.id)}
+            href={`/issue/${String(d.id)}`}
             target="_blank"
             rel="noreferrer"
             style={{
@@ -256,9 +267,9 @@ function StepResult({ tool, result }: { tool: string; result: any }) {
               background: T.ink[50],
             }}
           >
-            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.title}</span>
+            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(d.title)}</span>
             <span style={{ fontFamily: T.fontMono, fontSize: 10, color: "#6E48F0", fontWeight: 600 }}>
-              {Math.round((d.similarity ?? 0) * 100)}%
+              {Math.round(((d.similarity as number) ?? 0) * 100)}%
             </span>
           </a>
         ))}
@@ -268,8 +279,8 @@ function StepResult({ tool, result }: { tool: string; result: any }) {
   if (tool === "pickDepartment") {
     return (
       <div style={{ fontSize: 11, paddingLeft: 24 }}>
-        <span style={{ fontWeight: 600, color: T.ink[800] }}>{result.department}</span>
-        <span style={{ color: T.ink[500] }}> · {result.lead}</span>
+        <span style={{ fontWeight: 600, color: T.ink[800] }}>{String(result.department)}</span>
+        <span style={{ color: T.ink[500] }}> · {String(result.lead)}</span>
       </div>
     );
   }
@@ -280,11 +291,11 @@ function StepResult({ tool, result }: { tool: string; result: any }) {
           fontSize: 12, color: T.ink[800],
           paddingLeft: 24, paddingTop: 4,
           fontStyle: "italic",
-          direction: "auto" as any,
+          direction: "auto" as React.CSSProperties["direction"],
           lineHeight: 1.45,
         }}
       >
-        "{result.reply}"
+        &quot;{String(result.reply)}&quot;
       </div>
     );
   }
@@ -299,7 +310,7 @@ function StepResult({ tool, result }: { tool: string; result: any }) {
           lineHeight: 1.45,
         }}
       >
-        {result.dispatch}
+        {String(result.dispatch)}
       </pre>
     );
   }

@@ -30,7 +30,7 @@ export default function SignInPage() {
     } else {
       try {
         const sessionRes = await fetch("/api/auth/session");
-        const session = await sessionRes.json();
+        const session = (await sessionRes.json()) as { user?: { role?: string } } | null;
         const dest = session?.user?.role === "ADMIN" ? "/dashboard" : "/";
         router.push(dest);
         router.refresh();
@@ -205,7 +205,7 @@ export default function SignInPage() {
             color: MS_TOKENS.ink[500],
           }}
         >
-          Don't have an account?{" "}
+          Don&apos;t have an account?{" "}
           <Link
             href="/auth/signup"
             style={{ color: MS_TOKENS.blue[600], fontWeight: 600, textDecoration: "none" }}

@@ -3,7 +3,7 @@ import { analyzeImage } from "~/lib/gemini";
 
 export async function POST(request: Request) {
   try {
-    const { imageBase64 } = await request.json();
+    const { imageBase64 } = (await request.json()) as { imageBase64: string };
 
     if (!imageBase64) {
       return NextResponse.json(

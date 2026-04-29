@@ -8,29 +8,53 @@ import dynamic from "next/dynamic";
 import { MS_TOKENS } from "~/lib/tokens";
 import { MSGetCat, getIcon } from "~/lib/data";
 import { StatusBadge, PriorityBadge, SectionHead } from "~/components/ui";
-import { useIssue, toggleVote, addComment } from "~/lib/api";
+import { useIssue, toggleVote, addComment, type Issue } from "~/lib/api";
+
+type IssueDetail = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  status: string;
+  priority: string;
+  location: string;
+  area: string;
+  lat: number | null;
+  lng: number | null;
+  photo: string | null;
+  resolvedPhoto: string | null;
+  isAnonymous: boolean;
+  upvotes: number;
+  createdAt: string;
+  updatedAt: string;
+  reporter: { name: string | null } | null;
+  timeline: Array<{ label: string; done: boolean; timestamp: string; note?: string }>;
+  comments: Array<{ id: string; body: string; isOfficial: boolean; createdAt: string; author: { name: string | null } | null }>;
+  _count: { comments: number };
+};
 
 const LeafletMap = dynamic(() => import("~/components/leaflet-map"), { ssr: false, loading: () => <div style={{ width: "100%", height: "100%", background: "#e8e0d0" }} /> });
 
 export default function DetailPage() {
   const params = useParams();
   const id = params.id as string;
-  const { issue, loading, error } = useIssue(id);
+  const { issue: issueRaw, loading, error } = useIssue(id);
+  const issue = issueRaw as IssueDetail | null;
   const { data: session } = useSession();
   const [voted, setVoted] = useState(false);
   const [voteCount, setVoteCount] = useState(0);
-  const [comments, setComments] = useState<any[]>([]);
+  const [comments, setComments] = useState<IssueDetail["comments"]>([]);
   const [commentText, setCommentText] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
   const [replyTo, setReplyTo] = useState<{ id: string; author: string } | null>(null);
   const [nearbyData, setNearbyData] = useState<{ count: number; urgent: number } | null>(null);
-  const [similarIssues, setSimilarIssues] = useState<any[]>([]);
+  const [similarIssues, setSimilarIssues] = useState<Issue[]>([]);
   const [escalated, setEscalated] = useState(false);
 
   useEffect(() => {
     if (issue) {
-      setVoteCount(issue.upvotes ?? 0);
-      setComments(issue.comments ?? []);
+      setVoteCount(issue.upvotes);
+      setComments(issue.comments);
     }
   }, [issue]);
 
@@ -38,28 +62,29 @@ export default function DetailPage() {
   useEffect(() => {
     if (!navigator.geolocation) return;
     navigator.geolocation.getCurrentPosition((pos) => {
-      fetch(`/api/issues/nearby?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`)
-        .then((r) => r.json())
+      void fetch(`/api/issues/nearby?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`)
+        .then((r) => r.json() as Promise<{ count: number; urgent: number }>)
         .then(setNearbyData)
-        .catch(() => {});
-    }, () => {}, { timeout: 5000 });
+        .catch(() => undefined);
+    }, () => undefined, { timeout: 5000 });
   }, []);
 
   // Fetch similar/duplicate issues once issue is loaded
   useEffect(() => {
     if (!issue) return;
-    fetch(`/api/issues/similar?category=${issue.category}&area=${encodeURIComponent(issue.area ?? "")}&excludeId=${issue.id}${issue.lat != null && issue.lng != null ? `&lat=${issue.lat}&lng=${issue.lng}` : ""}`)
-      .then((r) => r.json())
+    fetch(`/api/issues/similar?category=${issue.category}&area=${encodeURIComponent(issue.area)}&excludeId=${issue.id}${issue.lat != null && issue.lng != null ? `&lat=${issue.lat}&lng=${issue.lng}` : ""}`)
+      .then((r) => r.json() as Promise<Issue[]>)
       .then(setSimilarIssues)
-      .catch(() => {});
+      .catch(() => undefined);
   }, [issue]);
 
   const handleVote = async () => {
     if (!session?.user?.id) { window.location.href = "/auth/signin"; return; }
     try {
       const res = await toggleVote(id, session.user.id);
-      setVoted(res.voted);
-      setVoteCount((c) => res.voted ? c + 1 : c - 1);
+      const voted = res.voted as boolean;
+      setVoted(voted);
+      setVoteCount((c) => voted ? c + 1 : c - 1);
       if (res.escalated) setEscalated(true);
     } catch { /* silent */ }
   };
@@ -70,7 +95,7 @@ export default function DetailPage() {
     setSubmittingComment(true);
     try {
       const body = replyTo ? `↩ @${replyTo.author}: ${commentText.trim()}` : commentText.trim();
-      const newComment = await addComment(id, body, session.user.id);
+      const newComment = await addComment(id, body, session.user.id) as IssueDetail["comments"][0];
       setComments((prev) => [newComment, ...prev]);
       setCommentText("");
       setReplyTo(null);
@@ -102,11 +127,11 @@ export default function DetailPage() {
 
   const resolvedAt = isResolved ? new Date(issue.updatedAt).toLocaleString("en-PK", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "ETA pending";
   const timeline = issue.timeline?.length > 0
-    ? issue.timeline.map((t: any) => {
+    ? issue.timeline.map((t) => {
         const isResolvedStep = t.label?.toLowerCase() === "resolved";
         return {
           t: t.label,
-          at: isResolved && isResolvedStep && !t.done ? resolvedAt : (t.note || new Date(t.timestamp).toLocaleString("en-PK", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })),
+          at: isResolved && isResolvedStep && !t.done ? resolvedAt : (t.note ?? new Date(t.timestamp).toLocaleString("en-PK", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })),
           done: isResolved ? true : t.done,
           note: t.note,
         };
@@ -124,7 +149,7 @@ export default function DetailPage() {
   return (
     <div className="mx-auto h-[100dvh] max-w-md overflow-auto" style={{ background: T.paper, fontFamily: T.fontUI, color: T.ink[900], position: "relative" }}>
       {/* Hero image */}
-      <div style={{ position: "relative", height: 280, overflow: "hidden", background: `url(${(isResolved && issue.resolvedPhoto) || issue.photo}) center/cover, ${T.ink[300]}` }}>
+      <div style={{ position: "relative", height: 280, overflow: "hidden", background: `url(${(isResolved && issue.resolvedPhoto) ?? issue.photo}) center/cover, ${T.ink[300]}` }}>
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(11,26,36,0.5) 0%, transparent 30%, transparent 70%, rgba(11,26,36,0.6) 100%)" }} />
         <Link href="/">
           <button style={{ all: "unset", cursor: "pointer", position: "absolute", left: 14, top: 14, width: 38, height: 38, borderRadius: 99, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -148,7 +173,7 @@ export default function DetailPage() {
           {/* Native share */}
           <div
             style={{ width: 38, height: 38, borderRadius: 99, background: "rgba(255,255,255,0.95)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", color: T.ink[900], cursor: "pointer" }}
-            onClick={() => navigator.share?.({ title: issue.title, url: window.location.href }).catch(() => {})}
+            onClick={() => { void navigator.share?.({ title: issue.title, url: window.location.href }).catch(() => undefined); }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
@@ -192,10 +217,10 @@ export default function DetailPage() {
           <div style={{ marginBottom: 14, padding: "10px 14px", borderRadius: 12, background: "#FFFDE7", border: "1px solid #FDD835" }}>
             <div style={{ fontFamily: T.fontMono, fontSize: 9, color: "#F57F17", letterSpacing: "0.12em", marginBottom: 6 }}>SIMILAR OPEN ISSUES NEARBY</div>
             {similarIssues.map((s) => (
-              <Link key={s.id} href={`/issue/${s.id}`}>
+              <Link key={String(s.id)} href={`/issue/${String(s.id)}`}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 0", cursor: "pointer" }}>
-                  <span style={{ fontSize: 11, color: "#795548", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.title}</span>
-                  <span style={{ fontFamily: T.fontMono, fontSize: 10, color: "#9E9E9E" }}>▲ {s.upvotes}</span>
+                  <span style={{ fontSize: 11, color: "#795548", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{String(s.title)}</span>
+                  <span style={{ fontFamily: T.fontMono, fontSize: 10, color: "#9E9E9E" }}>▲ {String(s.upvotes)}</span>
                 </div>
               </Link>
             ))}
@@ -221,7 +246,7 @@ export default function DetailPage() {
         {/* Reporter & location */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 10, fontSize: 12, color: T.ink[600] }}>
           <div style={{ width: 24, height: 24, borderRadius: 99, background: T.blue[100], color: T.blue[700], display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>
-            {reporterName.split(" ").map((s: string) => s[0]).join("")}
+            {reporterName.split(" ").map((s) => s[0]).join("")}
           </div>
           <span>
             <b style={{ color: T.ink[800] }}>{reporterName}</b>
@@ -260,7 +285,7 @@ export default function DetailPage() {
         <div style={{ marginTop: 22 }}>
           <SectionHead eyebrow="Status" title="Tracker" />
           <div style={{ background: "#fff", borderRadius: 16, padding: "6px 14px", border: `1px solid ${T.ink[100]}` }}>
-            {timeline.map((step: any, i: number) => (
+            {timeline.map((step, i) => (
               <TimelineStep key={i} step={step} last={i === timeline.length - 1} />
             ))}
           </div>
@@ -309,12 +334,12 @@ export default function DetailPage() {
               No comments yet. Be the first to update!
             </div>
           ) : (
-            comments.map((c: any) => (
+            comments.map((c) => (
               <Comment
                 key={c.id}
                 author={c.author?.name ?? "Anonymous"}
                 official={c.isOfficial}
-                avatar={(c.author?.name ?? "?").split(" ").map((s: string) => s[0]).join("").slice(0, 2)}
+                avatar={(c.author?.name ?? "?").split(" ").map((s) => s[0]).join("").slice(0, 2)}
                 time={new Date(c.createdAt).toLocaleDateString("en-PK", { day: "numeric", month: "short" })}
                 body={c.body}
                 onReply={() => setReplyTo({ id: c.id, author: c.author?.name ?? "Anonymous" })}
@@ -336,7 +361,7 @@ export default function DetailPage() {
           <input
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleComment(); } }}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleComment(); } }}
             placeholder={session ? (replyTo ? `Reply to ${replyTo.author}…` : "Add an update or comment…") : "Sign in to comment…"}
             disabled={!session || submittingComment}
             style={{
@@ -405,7 +430,7 @@ function TimelineStep({ step, last }: { step: { t: string; at: string; done: boo
   );
 }
 
-function BeforeAfter({ label, img, tone }: { label: string; img: string; tone: string }) {
+function BeforeAfter({ label, img, tone }: { label: string; img: string | null; tone: string }) {
   const T = MS_TOKENS;
   return (
     <div style={{ position: "relative", borderRadius: 12, overflow: "hidden", aspectRatio: "1", background: `url(${img}) center/cover, ${T.ink[100]}`, border: `1px solid ${T.ink[100]}` }}>

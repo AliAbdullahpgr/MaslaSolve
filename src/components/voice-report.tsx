@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { MS_TOKENS } from "~/lib/tokens";
 
 type VoiceResult = {
@@ -30,8 +30,7 @@ function pickMime(): string {
   ];
   if (typeof window === "undefined" || !("MediaRecorder" in window)) return "audio/webm";
   for (const m of candidates) {
-    // @ts-ignore
-    if (MediaRecorder.isTypeSupported?.(m)) return m;
+    if (MediaRecorder.isTypeSupported(m)) return m;
   }
   return "audio/webm";
 }
@@ -100,7 +99,7 @@ export default function VoiceReport({ onResult, disabled }: Props) {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
     streamRef.current?.getTracks().forEach((t) => t.stop());
-    audioCtxRef.current?.close().catch(() => {});
+    audioCtxRef.current?.close().catch((_e: unknown) => undefined);
     streamRef.current = null;
     audioCtxRef.current = null;
     analyserRef.current = null;
@@ -125,7 +124,8 @@ export default function VoiceReport({ onResult, disabled }: Props) {
       mediaRecorderRef.current = mr;
 
       // mic level meter
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const WinAudio = (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      const ctx = new (window.AudioContext ?? WinAudio!)();
       audioCtxRef.current = ctx;
       const src = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
@@ -148,14 +148,14 @@ export default function VoiceReport({ onResult, disabled }: Props) {
       }, 250);
 
       setRecording(true);
-    } catch (e: any) {
-      setError(e?.message || "Microphone access denied");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Microphone access denied");
     }
   }
 
   function stop() {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-      mediaRecorderRef.current.stop();
+    if (mediaRecorderRef.current?.state !== "inactive") {
+      mediaRecorderRef.current?.stop();
     }
     setRecording(false);
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -188,12 +188,12 @@ export default function VoiceReport({ onResult, disabled }: Props) {
       const data = (await res.json()) as VoiceResult;
       setResult(data);
       onResult(data);
-      if (data.followUp && data.followUp.trim()) {
+      if (data.followUp?.trim()) {
         // Voices load async on first use; wait a tick so getVoices() is populated
         setTimeout(() => speak(data.followUp), 200);
       }
-    } catch (e: any) {
-      setError(e?.message || "Failed to process audio");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to process audio");
     } finally {
       setProcessing(false);
       cleanup();
@@ -321,8 +321,8 @@ export default function VoiceReport({ onResult, disabled }: Props) {
             <div style={{ fontFamily: T.fontMono, fontSize: 9, color: T.ink[500], letterSpacing: "0.12em", marginBottom: 4 }}>
               YOU SAID
             </div>
-            <div style={{ fontSize: 13, color: T.ink[800], fontStyle: "italic", direction: "auto" as any }}>
-              "{result.transcript}"
+            <div style={{ fontSize: 13, color: T.ink[800], fontStyle: "italic", direction: "auto" as React.CSSProperties["direction"] }}>
+              &quot;{result.transcript}&quot;
             </div>
           </div>
           {result.followUp && (
@@ -347,7 +347,7 @@ export default function VoiceReport({ onResult, disabled }: Props) {
                   {speaking ? "■" : "▶"}
                 </button>
               </div>
-              <div style={{ fontSize: 13, color: "#5D4037", direction: "auto" as any, lineHeight: 1.5 }}>{result.followUp}</div>
+              <div style={{ fontSize: 13, color: "#5D4037", direction: "auto" as React.CSSProperties["direction"], lineHeight: 1.5 }}>{result.followUp}</div>
               {speaking && (
                 <div style={{ display: "flex", gap: 3, marginTop: 6, alignItems: "flex-end", height: 12 }}>
                   {[0, 1, 2, 3, 4].map((i) => (

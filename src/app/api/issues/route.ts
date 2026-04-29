@@ -23,13 +23,15 @@ export async function GET(request: Request) {
   const area = searchParams.get("area");
   const priority = searchParams.get("priority");
 
-  const issues = await db.issue.findMany({
-    where: {
-      ...(status && { status: status as any }),
-      ...(category && { category: category as any }),
-      ...(area && { area }),
-      ...(priority && { priority: priority as any }),
-    },
+  /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment */
+  const whereFilter: any = {
+    ...(status && { status }),
+    ...(category && { category }),
+    ...(area && { area }),
+    ...(priority && { priority }),
+  };
+  const rawIssues = await db.issue.findMany({
+    where: whereFilter,
     orderBy: { createdAt: "desc" },
     include: {
       reporter: { select: { id: true, name: true, image: true } },
@@ -37,16 +39,17 @@ export async function GET(request: Request) {
       _count: { select: { comments: true, votes: true } },
     },
   });
+  /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment */
 
-  return NextResponse.json(issues);
+  return NextResponse.json(rawIssues);
 }
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const body: unknown = await request.json();
     const parsed = createIssueSchema.parse(body);
 
-    const description = parsed.description || "No description provided";
+    const description = parsed.description ?? "No description provided";
     const embeddingText = `${parsed.category} | ${parsed.area} | ${parsed.title} | ${description}`;
     const embedding = (await embedIssueText(embeddingText)) ?? [];
 

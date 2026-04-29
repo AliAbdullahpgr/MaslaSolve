@@ -36,7 +36,7 @@ export async function PATCH(
   const { id } = await params;
 
   try {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     const allowed = ["status", "priority", "title", "description", "location", "photo", "resolvedPhoto"];
     const data = Object.fromEntries(
       Object.entries(body).filter(([key]) => allowed.includes(key))

@@ -39,9 +39,9 @@ Low if: cosmetic or minor`;
     ]);
 
     const text = result.response.text();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    const jsonMatch = /\{[\s\S]*\}/.exec(text);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      return JSON.parse(jsonMatch[0]) as Record<string, unknown>;
     }
     return null;
   } catch (error) {
@@ -110,8 +110,8 @@ Priority:
       { inlineData: { mimeType, data: audioBase64 } },
     ]);
     const text = result.response.text();
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (jsonMatch) return JSON.parse(jsonMatch[0]);
+    const jsonMatch = /\{[\s\S]*\}/.exec(text);
+    if (jsonMatch) return JSON.parse(jsonMatch[0]) as Record<string, unknown>;
     return null;
   } catch (error) {
     console.error("Gemini transcribe error:", error);

@@ -21,7 +21,8 @@ export async function GET(request: Request) {
   const hasCoords = Number.isFinite(lat) && Number.isFinite(lng);
   const RADIUS_DEG = 0.018; // ~2km bbox — wide net, embeddings do the precision work
 
-  const where: any = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: Record<string, any> = {
     status: { not: "RESOLVED" },
     createdAt: { gte: thirtyDaysAgo },
     ...(excludeId ? { id: { not: excludeId } } : {}),
@@ -35,10 +36,7 @@ export async function GET(request: Request) {
     return NextResponse.json([]);
   }
 
-  // Hard-restrict to same category. Cross-category embedding similarity is noisy
-  // (civic-issue text shares too much vocabulary), so we let category do the coarse
-  // filter and let embeddings handle "is this the same incident?".
-  where.category = category as any;
+  where.category = category;
 
   const candidates = await db.issue.findMany({
     where,
@@ -69,15 +67,15 @@ export async function GET(request: Request) {
   // for the "very likely duplicate" tier.
   const scored = candidates
     .map((c) => {
-      const sim = c.embedding && c.embedding.length
-        ? cosineSimilarity(queryEmbedding, c.embedding as number[])
+      const sim = c.embedding?.length
+        ? cosineSimilarity(queryEmbedding, c.embedding)
         : 0;
       return { ...c, similarity: sim };
     })
     .filter((c) => c.similarity >= 0.78)
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, 4)
-    .map(({ embedding, ...rest }) => rest);
+    .map(({ embedding: _embedding, ...rest }) => rest);
 
   return NextResponse.json(scored);
 }

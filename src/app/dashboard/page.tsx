@@ -11,6 +11,29 @@ const LeafletMap = dynamic(() => import("~/components/leaflet-map"), { ssr: fals
 const TriageTrace = dynamic(() => import("~/components/triage-trace"), { ssr: false });
 import { useIssues } from "~/lib/api";
 
+type DashIssue = {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  category: string;
+  area: string;
+  location: string;
+  lat: number | null;
+  lng: number | null;
+  upvotes: number;
+  photo: string | null;
+  resolvedPhoto: string | null;
+  description: string | null;
+  reporter: { id: string; name: string | null; image: string | null } | null;
+  _count: { comments: number; votes: number };
+  createdAt: string;
+  statusLower?: string;
+  priorityLower?: string;
+  categoryLower?: string;
+  [key: string]: unknown;
+};
+
 const AREAS = ["All Lahore", "Gulberg", "DHA", "Cantt", "Old Lahore", "Iqbal Town", "Johar Town"];
 const CATEGORIES = ["All types", "POTHOLE", "GARBAGE", "TRAFFIC", "STREETLIGHT", "SEWAGE", "WATER", "OTHER"];
 const STATUSES = ["All", "REPORTED", "IN_PROGRESS", "RESOLVED"];
@@ -23,7 +46,7 @@ async function patchIssue(id: string, data: Record<string, string>) {
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("Failed to update issue");
-  return res.json();
+  return res.json() as Promise<Record<string, unknown>>;
 }
 
 export default function DashboardPage() {
@@ -48,12 +71,12 @@ export default function DashboardPage() {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const [localIssues, setLocalIssues] = useState<any[]>([]);
-  React.useEffect(() => { setLocalIssues(issues); }, [issues]);
+  const [localIssues, setLocalIssues] = useState<DashIssue[]>([]);
+  React.useEffect(() => { setLocalIssues(issues as DashIssue[]); }, [issues]);
 
   const displayedIssues = useMemo(() => {
     return localIssues
-      .map((issue: any) => ({
+      .map((issue) => ({
         ...issue,
         statusLower: issue.status.toLowerCase(),
         priorityLower: issue.priority.toLowerCase(),
@@ -74,15 +97,15 @@ export default function DashboardPage() {
 
   const selectedIssue = selectedId ? displayedIssues.find((i) => i.id === selectedId) ?? null : null;
 
-  const openCount = localIssues.filter((i: any) => i.status === "REPORTED").length;
-  const inProgressCount = localIssues.filter((i: any) => i.status === "IN_PROGRESS").length;
-  const resolvedCount = localIssues.filter((i: any) => i.status === "RESOLVED").length;
+  const openCount = localIssues.filter((i) => i.status === "REPORTED").length;
+  const inProgressCount = localIssues.filter((i) => i.status === "IN_PROGRESS").length;
+  const resolvedCount = localIssues.filter((i) => i.status === "RESOLVED").length;
 
   const doAction = async (id: string, data: Record<string, string>) => {
     setActionLoading(true);
     try {
       const updated = await patchIssue(id, data);
-      setLocalIssues(prev => prev.map((i: any) => i.id === id ? { ...i, ...updated } : i));
+      setLocalIssues(prev => prev.map((i) => i.id === id ? { ...i, ...updated } : i));
     } catch { /* silent */ } finally {
       setActionLoading(false);
     }
@@ -156,7 +179,7 @@ export default function DashboardPage() {
             style={{ padding: "7px 10px", fontSize: 12, color: areaFilter === a ? "#fff" : "rgba(255,255,255,0.6)", display: "flex", justifyContent: "space-between", cursor: "pointer", borderRadius: 6, background: areaFilter === a ? "rgba(255,255,255,0.12)" : "transparent" }}
           >
             <span>{a}</span>
-            <span style={{ fontFamily: T.fontMono, fontSize: 10, opacity: 0.6 }}>{localIssues.filter((i: any) => i.area === a).length}</span>
+            <span style={{ fontFamily: T.fontMono, fontSize: 10, opacity: 0.6 }}>{localIssues.filter((i) => i.area === a).length}</span>
           </div>
         ))}
         <div style={{ marginTop: "auto", padding: 10, background: "rgba(255,255,255,0.05)", borderRadius: 10, fontSize: 11 }}>
@@ -387,12 +410,12 @@ export default function DashboardPage() {
                   .filter((i) => i.lat != null && i.lng != null)
                   .map((i) => ({
                     id: i.id,
-                    lat: i.lat,
-                    lng: i.lng,
+                    lat: i.lat!,
+                    lng: i.lng!,
                     color: i.priorityLower === "urgent" ? T.urgent : i.statusLower === "resolved" ? T.resolved : T.progress,
                     title: i.title,
-                    status: i.statusLower,
-                    priority: i.priorityLower,
+                    status: i.statusLower ?? i.status,
+                    priority: i.priorityLower ?? i.priority,
                     selected: selectedId === i.id,
                     onClick: () => setSelectedId(i.id),
                   }))}
@@ -406,8 +429,8 @@ export default function DashboardPage() {
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr", gap: 16 }}>
           <Card eyebrow="Analytics" title="Most affected areas">
             {AREAS.slice(1).map((area) => {
-              const count = localIssues.filter((i: any) => i.area === area).length;
-              const max = Math.max(1, ...AREAS.slice(1).map(a => localIssues.filter((i: any) => i.area === a).length));
+              const count = localIssues.filter((i) => i.area === area).length;
+              const max = Math.max(1, ...AREAS.slice(1).map(a => localIssues.filter((i) => i.area === a).length));
               return (
                 <div key={area} style={{ marginBottom: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3 }}>
@@ -425,7 +448,7 @@ export default function DashboardPage() {
           <Card eyebrow="Analytics" title="Most common issues">
             {(() => {
               const cats = ["POTHOLE","GARBAGE","TRAFFIC","STREETLIGHT","SEWAGE","WATER","OTHER"];
-              const counts = cats.map(c => ({ l: c.charAt(0) + c.slice(1).toLowerCase(), v: localIssues.filter((i: any) => i.category === c).length, c: MSGetCat(c.toLowerCase()).hue }));
+              const counts = cats.map(c => ({ l: c.charAt(0) + c.slice(1).toLowerCase(), v: localIssues.filter((i) => i.category === c).length, c: MSGetCat(c.toLowerCase()).hue }));
               const total = Math.max(1, counts.reduce((s, c) => s + c.v, 0));
               return counts.filter(c => c.v > 0).map(r => (
                 <div key={r.l} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, marginBottom: 6 }}>
@@ -483,9 +506,9 @@ function KPI({ label, value, delta, deltaPos, accent }: { label: string; value: 
   );
 }
 
-function DashRow({ issue, selected, onClick, isMobile }: { issue: any; selected: boolean; onClick: () => void; isMobile?: boolean }) {
+function DashRow({ issue, selected, onClick, isMobile }: { issue: DashIssue; selected: boolean; onClick: () => void; isMobile?: boolean }) {
   const T = MS_TOKENS;
-  const cat = MSGetCat(issue.categoryLower);
+  const cat = MSGetCat(issue.categoryLower ?? issue.category);
   const Icon = getIcon(cat.icon);
 
   if (isMobile) {
@@ -509,8 +532,8 @@ function DashRow({ issue, selected, onClick, isMobile }: { issue: any; selected:
           <span style={{ fontFamily: T.fontMono, fontSize: 11, color: T.ink[700], flexShrink: 0 }}>▲ {issue.upvotes}</span>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          <StatusBadge status={issue.statusLower} size="sm" />
-          <PriorityBadge priority={issue.priorityLower} size="sm" />
+          <StatusBadge status={issue.statusLower ?? issue.status} size="sm" />
+          <PriorityBadge priority={issue.priorityLower ?? issue.priority} size="sm" />
         </div>
       </div>
     );
@@ -534,8 +557,8 @@ function DashRow({ issue, selected, onClick, isMobile }: { issue: any; selected:
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: T.ink[900], fontWeight: 500 }}>{issue.title}</span>
       </div>
       <span style={{ color: T.ink[600], overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{issue.area}</span>
-      <StatusBadge status={issue.statusLower} size="sm" />
-      <PriorityBadge priority={issue.priorityLower} size="sm" />
+      <StatusBadge status={issue.statusLower ?? issue.status} size="sm" />
+      <PriorityBadge priority={issue.priorityLower ?? issue.priority} size="sm" />
       <span style={{ fontFamily: T.fontMono, color: T.ink[700], textAlign: "right" }}>▲ {issue.upvotes}</span>
     </div>
   );
@@ -554,7 +577,7 @@ function Card({ eyebrow, title, children }: { eyebrow: string; title: string; ch
   );
 }
 
-function DetailDrawer({ issue, loading, onClose, onAction, isMobile }: { issue: any; loading: boolean; onClose: () => void; onAction: (status: string) => void; isMobile?: boolean }) {
+function DetailDrawer({ issue, loading, onClose, onAction, isMobile }: { issue: DashIssue; loading: boolean; onClose: () => void; onAction: (status: string) => void; isMobile?: boolean }) {
   const T = MS_TOKENS;
   return (
     <>
@@ -575,12 +598,12 @@ function DetailDrawer({ issue, loading, onClose, onAction, isMobile }: { issue: 
         <span style={{ fontFamily: T.fontMono, fontSize: 10, color: T.ink[600], background: T.ink[100], padding: "3px 6px", borderRadius: 4 }}>
           …{issue.id.slice(-4)}
         </span>
-        <PriorityBadge priority={issue.priorityLower} size="sm" />
+        <PriorityBadge priority={issue.priorityLower ?? issue.priority} size="sm" />
         <span style={{ marginLeft: "auto", cursor: "pointer", color: T.ink[500], fontSize: 18, lineHeight: 1 }} onClick={onClose}>✕</span>
       </div>
-      <div style={{ height: 130, background: `url(${(String(issue.statusLower ?? issue.status).toLowerCase() === "resolved" && issue.resolvedPhoto) || issue.photo}) center/cover, ${T.ink[100]}`, position: "relative", flexShrink: 0 }}>
+      <div style={{ height: 130, background: `url(${(String(issue.statusLower ?? issue.status).toLowerCase() === "resolved" && issue.resolvedPhoto) ?? issue.photo}) center/cover, ${T.ink[100]}`, position: "relative", flexShrink: 0 }}>
         <div style={{ position: "absolute", left: 10, bottom: 10 }}>
-          <StatusBadge status={issue.statusLower} size="sm" />
+          <StatusBadge status={issue.statusLower ?? issue.status} size="sm" />
         </div>
       </div>
       <div style={{ padding: 14, overflow: "auto", flex: 1 }}>

@@ -17,7 +17,7 @@ const DEPARTMENTS: Record<string, { name: string; lead: string }> = {
   OTHER: { name: "City Operations Center", lead: "Triage Desk" },
 };
 
-function sse(controller: ReadableStreamDefaultController, event: string, data: any) {
+function sse(controller: ReadableStreamDefaultController, event: string, data: Record<string, unknown>) {
   const enc = new TextEncoder();
   const payload = `data: ${JSON.stringify({ event, ...data })}\n\n`;
   controller.enqueue(enc.encode(payload));
@@ -39,7 +39,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   const stream = new ReadableStream({
     async start(controller) {
-      const send = (event: string, data: any) => sse(controller, event, data);
+      const send = (event: string, data: Record<string, unknown>) => sse(controller, event, data);
       try {
         send("start", { issueId: id, ts: Date.now() });
 
@@ -83,9 +83,9 @@ Look at the image and respond ONLY with JSON:
                 visionPrompt,
                 { inlineData: { mimeType: imgData.mime, data: imgData.b64 } },
               ]);
-              const m = r.response.text().match(/\{[\s\S]*\}/);
-              if (m) photoVerdict = { ...photoVerdict, ...JSON.parse(m[0]) };
-            } catch (e) {
+              const m = /\{[\s\S]*\}/.exec(r.response.text());
+              if (m) photoVerdict = { ...photoVerdict, ...(JSON.parse(m[0]) as typeof photoVerdict) };
+            } catch {
               photoVerdict.reason = "Vision check skipped (model error)";
             }
           }
@@ -108,11 +108,12 @@ Look at the image and respond ONLY with JSON:
         const RADIUS = 0.018;
         const sinceDays = 30;
         const since = new Date(Date.now() - sinceDays * 86400_000);
-        const where: any = {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const where: Record<string, any> = {
           id: { not: issue.id },
           status: { not: "RESOLVED" },
           createdAt: { gte: since },
-          category: issue.category, // hard category match — cross-category is noise
+          category: issue.category,
         };
         if (issue.lat != null && issue.lng != null) {
           where.lat = { gte: issue.lat - RADIUS, lte: issue.lat + RADIUS };
@@ -128,18 +129,18 @@ Look at the image and respond ONLY with JSON:
           },
           take: 80,
         });
-        const myEmb = (issue.embedding ?? []) as number[];
+        const myEmb = Array.isArray(issue.embedding) ? issue.embedding : [];
         const dupes = candidates
           .map((c) => {
             const sim = myEmb.length && c.embedding?.length
-              ? cosineSimilarity(myEmb, c.embedding as number[])
+              ? cosineSimilarity(myEmb, c.embedding)
               : 0;
             return { ...c, similarity: sim };
           })
           .filter((c) => c.similarity >= 0.78)
           .sort((a, b) => b.similarity - a.similarity)
           .slice(0, 5)
-          .map(({ embedding, ...rest }) => rest);
+          .map(({ embedding: _embedding, ...rest }) => rest);
         send("step", {
           n: 2,
           tool: "findDuplicates",
@@ -232,8 +233,9 @@ Location: ${issue.location} (${issue.lat ?? "?"}, ${issue.lng ?? "?"})`;
           },
         });
         controller.close();
-      } catch (e: any) {
-        sse(controller, "error", { message: e?.message ?? "triage failed" });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "triage failed";
+        sse(controller, "error", { message: msg });
         controller.close();
       }
     },

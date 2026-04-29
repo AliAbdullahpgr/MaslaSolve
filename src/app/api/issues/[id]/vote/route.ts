@@ -8,7 +8,7 @@ export async function POST(
   const { id } = await params;
 
   try {
-    const { userId } = await request.json();
+    const { userId } = (await request.json()) as { userId?: string };
 
     if (!userId) {
       return NextResponse.json({ error: "User ID required" }, { status: 400 });

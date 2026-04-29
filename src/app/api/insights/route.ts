@@ -71,7 +71,7 @@ export async function GET() {
     const statusByArea: Record<string, { reported: number; in_progress: number; resolved: number }> = {};
     for (const i of issues) {
       const a = i.area || "Unknown";
-      if (!statusByArea[a]) statusByArea[a] = { reported: 0, in_progress: 0, resolved: 0 };
+      statusByArea[a] ??= { reported: 0, in_progress: 0, resolved: 0 };
       if (i.status === "REPORTED") statusByArea[a].reported++;
       else if (i.status === "IN_PROGRESS") statusByArea[a].in_progress++;
       else if (i.status === "RESOLVED") statusByArea[a].resolved++;

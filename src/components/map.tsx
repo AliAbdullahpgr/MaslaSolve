@@ -30,7 +30,7 @@ const palettes = {
   },
 };
 
-type Palette = typeof palettes.paper;
+type Palette = { [K in keyof typeof palettes.paper]: string };
 
 function MapContent({ p, showLandmarks }: { p: Palette; showLandmarks: boolean }) {
   return (
@@ -132,7 +132,7 @@ export function LahoreMap({
   children?: React.ReactNode;
   style?: React.CSSProperties;
 }) {
-  const p = palettes[mood] ?? palettes.paper;
+  const p: Palette = palettes[mood] ?? palettes.paper;
 
   const svgRef = useRef<SVGSVGElement>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });

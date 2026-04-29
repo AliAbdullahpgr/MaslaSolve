@@ -10,6 +10,24 @@ import dynamic from "next/dynamic";
 import { useIssues } from "~/lib/api";
 import Loader from "~/components/loader";
 
+type MappedIssue = {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  category: string;
+  area: string;
+  location: string;
+  lat: number | null;
+  lng: number | null;
+  upvotes: number;
+  photo: string | null;
+  resolvedPhoto: string | null;
+  reporterId: string | null;
+  distance: string;
+  [key: string]: unknown;
+};
+
 const LeafletMap = dynamic(() => import("~/components/leaflet-map"), { ssr: false, loading: () => <div style={{ width: "100%", height: "100%", background: "#e8e0d0" }} /> });
 
 export default function HomePage() {
@@ -20,7 +38,7 @@ export default function HomePage() {
   const [searchActive, setSearchActive] = useState(false);
   const { data: session } = useSession();
 
-  const { issues, loading } = useIssues(
+  const { issues } = useIssues(
     filter === "urgent" ? { priority: "URGENT" } : undefined
   );
 
@@ -39,7 +57,7 @@ export default function HomePage() {
   }, [minHold]);
   const showLoader = minHold;
 
-  const allMapped = useMemo(() => issues.map((issue: any) => ({
+  const allMapped = useMemo(() => (issues as MappedIssue[]).map((issue) => ({
     ...issue,
     status: issue.status.toLowerCase(),
     priority: issue.priority.toLowerCase(),
@@ -50,22 +68,22 @@ export default function HomePage() {
   const displayedIssues = useMemo(() => {
     let list = allMapped;
     if (filter === "mine" && session?.user?.id) {
-      list = list.filter((i: any) => i.reporterId === session.user.id);
+      list = list.filter((i) => i.reporterId === session.user.id);
     }
     if (search.trim()) {
       const q = search.trim().toLowerCase();
-      list = list.filter((i: any) =>
-        i.title?.toLowerCase().includes(q) ||
-        i.location?.toLowerCase().includes(q) ||
-        i.area?.toLowerCase().includes(q) ||
-        i.id?.toLowerCase().includes(q)
+      list = list.filter((i) =>
+        i.title.toLowerCase().includes(q) ||
+        (i.location ?? "").toLowerCase().includes(q) ||
+        (i.area ?? "").toLowerCase().includes(q) ||
+        i.id.toLowerCase().includes(q)
       );
     }
     return list;
   }, [allMapped, filter, search, session]);
 
   const selectedIssue =
-    displayedIssues.find((i: any) => i.id === selectedId) ?? displayedIssues[0];
+    displayedIssues.find((i) => i.id === selectedId) ?? displayedIssues[0];
 
   if (showLoader) {
     return (
@@ -108,7 +126,7 @@ export default function HomePage() {
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {(session?.user as any)?.role === "ADMIN" && (
+            {(session?.user as { role?: string })?.role === "ADMIN" && (
               <Link
                 href="/dashboard"
                 style={{
@@ -223,8 +241,8 @@ export default function HomePage() {
                 center={[31.5204, 74.3587]}
                 zoom={13}
                 markers={displayedIssues
-                  .filter((i: any) => i.lat != null && i.lng != null)
-                  .map((i: any) => {
+                  .filter((i) => i.lat != null && i.lng != null)
+                  .map((i) => {
                     const cat = MSGetCat(i.category);
                     const isUrgent = i.priority === "urgent";
                     const color =
@@ -234,8 +252,8 @@ export default function HomePage() {
                       : cat.hue;
                     return {
                       id: i.id,
-                      lat: i.lat,
-                      lng: i.lng,
+                      lat: i.lat!,
+                      lng: i.lng!,
                       color,
                       title: i.title,
                       status: i.status,
@@ -249,7 +267,7 @@ export default function HomePage() {
 
               {/* Overlays on top of map */}
               <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 1000 }}>
-                <AIBanner urgentCount={displayedIssues.filter((i: any) => i.priority === "urgent" && i.status !== "resolved").length} totalCount={displayedIssues.length} />
+                <AIBanner urgentCount={displayedIssues.filter((i) => i.priority === "urgent" && i.status !== "resolved").length} totalCount={displayedIssues.length} />
                 {selectedIssue && (
                   <div style={{ pointerEvents: "auto" }}>
                     <BottomSheetCard issue={selectedIssue} />
@@ -290,7 +308,7 @@ export default function HomePage() {
                   <div style={{ fontSize: 14 }}>No issues found</div>
                 </div>
               ) : (
-                displayedIssues.map((i: any, idx: number) => (
+                displayedIssues.map((i, idx) => (
                   <IssueCard key={i.id} issue={i} rank={idx + 1} />
                 ))
               )}
@@ -338,13 +356,13 @@ function AIBanner({ urgentCount = 0, totalCount = 0 }: { urgentCount?: number; t
   );
 }
 
-function BottomSheetCard({ issue }: { issue: any }) {
+function BottomSheetCard({ issue }: { issue: MappedIssue }) {
   const T = MS_TOKENS;
   return (
     <Link href={`/issue/${issue.id}`}>
       <div style={{ position: "absolute", left: 12, right: 12, bottom: 70, background: "#fff", borderRadius: 14, padding: 9, display: "flex", gap: 10, alignItems: "center", boxShadow: T.shadow.lg, cursor: "pointer", border: `1px solid ${T.ink[100]}` }}>
         <div style={{ width: 3, alignSelf: "stretch", borderRadius: 4, background: T.urgent }} />
-        <div style={{ width: 44, height: 44, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: `url(${(String(issue.status).toLowerCase() === "resolved" && issue.resolvedPhoto) || issue.photo}) center/cover, ${T.ink[100]}` }} />
+        <div style={{ width: 44, height: 44, borderRadius: 10, overflow: "hidden", flexShrink: 0, background: `url(${(String(issue.status).toLowerCase() === "resolved" && issue.resolvedPhoto) ?? issue.photo}) center/cover, ${T.ink[100]}` }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", gap: 5, marginBottom: 2 }}>
             <PriorityBadge priority={issue.priority} size="sm" />
@@ -361,7 +379,7 @@ function BottomSheetCard({ issue }: { issue: any }) {
   );
 }
 
-function IssueCard({ issue, rank }: { issue: any; rank: number }) {
+function IssueCard({ issue, rank }: { issue: MappedIssue; rank: number }) {
   const T = MS_TOKENS;
   const cat = MSGetCat(issue.category);
   const Icon = getIcon(cat.icon);
@@ -370,7 +388,7 @@ function IssueCard({ issue, rank }: { issue: any; rank: number }) {
       <div style={{ background: "#fff", borderRadius: 18, marginBottom: 12, border: `1px solid ${T.ink[100]}`, overflow: "hidden", boxShadow: T.shadow.sm, cursor: "pointer" }}>
         <div style={{ display: "flex", gap: 12, padding: 12 }}>
           <div style={{ position: "relative", width: 84, height: 84, flexShrink: 0 }}>
-            <div style={{ width: "100%", height: "100%", borderRadius: 12, background: `url(${(String(issue.status).toLowerCase() === "resolved" && issue.resolvedPhoto) || issue.photo}) center/cover, ${T.ink[100]}` }} />
+            <div style={{ width: "100%", height: "100%", borderRadius: 12, background: `url(${(String(issue.status).toLowerCase() === "resolved" && issue.resolvedPhoto) ?? issue.photo}) center/cover, ${T.ink[100]}` }} />
             <div style={{ position: "absolute", top: 6, left: 6, width: 22, height: 22, borderRadius: 6, background: "rgba(11,26,36,0.78)", color: "#fff", fontFamily: T.fontMono, fontSize: 10, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center" }}>
               #{rank}
             </div>

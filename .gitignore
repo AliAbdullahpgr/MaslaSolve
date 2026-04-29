@@ -44,3 +44,7 @@ yarn-error.log*
 
 # idea files
 .idea
+
+# scratch/temp files
+prisma/Untitled-*.txt
+prisma/schema.mongoose.js

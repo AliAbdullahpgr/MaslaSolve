@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 
+export type Issue = Record<string, unknown>;
+
 export function useIssues(filters?: { status?: string; category?: string; area?: string; priority?: string }) {
-  const [issues, setIssues] = useState<any[]>([]);
+  const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,7 +18,7 @@ export function useIssues(filters?: { status?: string; category?: string; area?:
 
         const res = await fetch(`/api/issues?${params}`);
         if (!res.ok) throw new Error("Failed to fetch issues");
-        const data = await res.json();
+        const data = (await res.json()) as Issue[];
         setIssues(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
@@ -25,25 +27,25 @@ export function useIssues(filters?: { status?: string; category?: string; area?:
       }
     };
 
-    fetchIssues();
+    void fetchIssues();
   }, [filters?.status, filters?.category, filters?.area, filters?.priority]);
 
   return { issues, loading, error, refresh: () => window.location.reload() };
 }
 
 export function useIssue(id: string) {
-  const [issue, setIssue] = useState<any>(null);
+  const [issue, setIssue] = useState<Issue | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
-    
+
     const fetchIssue = async () => {
       try {
         const res = await fetch(`/api/issues/${id}`);
         if (!res.ok) throw new Error("Failed to fetch issue");
-        const data = await res.json();
+        const data = (await res.json()) as Issue;
         setIssue(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
@@ -52,20 +54,20 @@ export function useIssue(id: string) {
       }
     };
 
-    fetchIssue();
+    void fetchIssue();
   }, [id]);
 
   return { issue, loading, error };
 }
 
-export async function createIssue(data: any) {
+export async function createIssue(data: Record<string, unknown>) {
   const res = await fetch("/api/issues", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("Failed to create issue");
-  return res.json();
+  return res.json() as Promise<Issue>;
 }
 
 export async function toggleVote(issueId: string, userId: string) {
@@ -75,7 +77,7 @@ export async function toggleVote(issueId: string, userId: string) {
     body: JSON.stringify({ userId }),
   });
   if (!res.ok) throw new Error("Failed to toggle vote");
-  return res.json();
+  return res.json() as Promise<Record<string, unknown>>;
 }
 
 export async function addComment(issueId: string, body: string, authorId: string) {
@@ -85,5 +87,5 @@ export async function addComment(issueId: string, body: string, authorId: string
     body: JSON.stringify({ body, authorId }),
   });
   if (!res.ok) throw new Error("Failed to add comment");
-  return res.json();
+  return res.json() as Promise<Record<string, unknown>>;
 }

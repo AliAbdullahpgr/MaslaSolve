@@ -68,8 +68,9 @@ export default function ReportPage() {
   const [geoStatus, setGeoStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [locked, setLocked] = useState(false);
 
+  type SimilarIssue = { id: string; title: string; similarity?: number; area?: string; upvotes: number };
   // Duplicate detection
-  const [similarIssues, setSimilarIssues] = useState<any[]>([]);
+  const [similarIssues, setSimilarIssues] = useState<SimilarIssue[]>([]);
 
   const rewriteTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,7 +78,7 @@ export default function ReportPage() {
 
   const { startUpload } = useUploadThing("imageUploader", {
     onClientUploadComplete: (res) => {
-      if (res?.[0]?.url) handleImageUpload(res[0].url);
+      if (res?.[0]?.url) void handleImageUpload(res[0].url);
       setUploading(false);
     },
     onUploadError: (err) => {
@@ -128,10 +129,10 @@ export default function ReportPage() {
       title: titleArg ?? manualTitle ?? "",
       description: descArg ?? desc ?? "",
     });
-    fetch(`/api/issues/similar?${params}`)
-      .then((r) => r.json())
+    void fetch(`/api/issues/similar?${params}`)
+      .then((r) => r.json() as Promise<SimilarIssue[]>)
       .then(setSimilarIssues)
-      .catch(() => {});
+      .catch(() => undefined);
   }, [lat, lng, manualTitle, desc]);
 
   // Debounced refetch of similar issues whenever description, title, or category changes
@@ -156,8 +157,9 @@ export default function ReportPage() {
       const blob = await response.blob();
       const reader = new FileReader();
       reader.readAsDataURL(blob);
-      reader.onloadend = async () => {
-        const base64 = reader.result?.toString().split(",")[1];
+      reader.onloadend = () => {
+        void (async () => {
+        const base64 = typeof reader.result === "string" ? reader.result.split(",")[1] : undefined;
         if (base64) {
           const res = await fetch("/api/analyze", {
             method: "POST",
@@ -165,7 +167,7 @@ export default function ReportPage() {
             body: JSON.stringify({ imageBase64: base64 }),
           });
           if (res.ok) {
-            const data = await res.json();
+            const data = await res.json() as { category?: string; priority?: string; description?: string };
             if (data.category) {
               const catMap: Record<string, string> = {
                 POTHOLE: "pothole", GARBAGE: "garbage", TRAFFIC: "traffic",
@@ -182,6 +184,7 @@ export default function ReportPage() {
           }
         }
         setAiThinking(false);
+        })();
       };
     } catch {
       setAiThinking(false);
@@ -200,7 +203,7 @@ export default function ReportPage() {
     setErrors((e) => ({ ...e, desc: "" }));
     if (rewriteTimer.current) clearTimeout(rewriteTimer.current);
     if (value.length > 30 && value.length < 300) {
-      rewriteTimer.current = setTimeout(async () => {
+      rewriteTimer.current = setTimeout(() => { void (async () => {
         setRewriteLoading(true);
         try {
           const res = await fetch("/api/rewrite", {
@@ -209,13 +212,13 @@ export default function ReportPage() {
             body: JSON.stringify({ description: value }),
           });
           if (res.ok) {
-            const data = await res.json();
+            const data = await res.json() as { rewritten?: string };
             if (data.rewritten) setDesc(data.rewritten);
           }
         } catch { /* silent */ } finally {
           setRewriteLoading(false);
         }
-      }, 1500);
+      })(); }, 1500);
     }
   };
 
@@ -242,7 +245,7 @@ export default function ReportPage() {
       };
 
       const derivedTitle = manualTitle.trim() ||
-        (desc ? (desc.split(".")[0]?.slice(0, 80) || cat.label + " reported") : cat.label + " reported");
+        (desc ? (desc.split(".")[0]?.slice(0, 80) ?? cat.label + " reported") : cat.label + " reported");
 
       await createIssue({
         title: derivedTitle,
@@ -543,7 +546,7 @@ export default function ReportPage() {
               <div style={{ fontSize: 12, color: "#795548", marginBottom: 8 }}>
                 These look like the same problem. Upvote one instead of duplicating.
               </div>
-              {similarIssues.map((s: any) => (
+              {similarIssues.map((s) => (
                 <a key={s.id} href={`/issue/${s.id}`} target="_blank" rel="noreferrer"
                   style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "#fff", borderRadius: 8, marginBottom: 4, textDecoration: "none", border: `1px solid ${T.ink[100]}` }}
                 >
@@ -682,7 +685,7 @@ export default function ReportPage() {
 
           {!session && (
             <div style={{ textAlign: "center", fontSize: 12, color: T.ink[500], padding: "8px 0" }}>
-              You'll be asked to{" "}
+              You&apos;ll be asked to{" "}
               <Link href="/auth/signin" style={{ color: T.blue[600], fontWeight: 600 }}>sign in</Link>
               {" "}before submitting.
             </div>

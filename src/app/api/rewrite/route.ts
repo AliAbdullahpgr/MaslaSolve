@@ -3,7 +3,7 @@ import { rewriteDescription } from "~/lib/gemini";
 
 export async function POST(request: Request) {
   try {
-    const { description } = await request.json();
+    const { description } = (await request.json()) as { description?: string };
 
     if (!description) {
       return NextResponse.json(
