@@ -7,6 +7,14 @@ import "./src/env.js";
 /** @type {import("next").NextConfig} */
 const config = {
   output: "standalone",
+  outputFileTracingIncludes: {
+    "/*": [
+      "./generated/prisma/**/*",
+      "./node_modules/.prisma/**/*",
+      "./node_modules/@prisma/client/**/*",
+      "./prisma/schema.prisma",
+    ],
+  },
   eslint: { ignoreDuringBuilds: true },
   images: {
     remotePatterns: [
