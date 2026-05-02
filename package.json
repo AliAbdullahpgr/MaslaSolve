@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npx cross-env NODE_OPTIONS=\"--require ./patch.cjs --max-old-space-size=4096\" next build",
+    "build": "npx cross-env SKIP_ENV_VALIDATION=1 NODE_OPTIONS=\"--require ./patch.cjs --max-old-space-size=4096\" next build",
     "check": "next lint && tsc --noEmit",
     "db:generate": "prisma migrate dev",
     "db:migrate": "prisma migrate deploy",
